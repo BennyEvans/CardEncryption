@@ -70,8 +70,8 @@ public class RSAService {
 	/**
 	 * Instantiates a new RSA service given p and q. Used to make RSA commutative.
 	 *
-	 * @param gp the gp
-	 * @param gq the gq
+	 * @param gp the given p
+	 * @param gq the given q
 	 * @throws InvalidKeySpecException the invalid key spec exception
 	 * @throws NoSuchAlgorithmException the no such algorithm exception
 	 * @throws NoSuchPaddingException the no such padding exception
@@ -105,7 +105,7 @@ public class RSAService {
 	/**
 	 * Generate encryption and decryption keys.
 	 * 
-	 * I have used a pretty dodgy way of generating e which make the algorithm a little less secure.
+	 * I have used a pretty dodgy way of generating e which makes the algorithm a little less secure.
 	 * At the moment e is chosen as a prime so as to make it more likely to be coprime to on.
 	 *
 	 * @throws NoSuchAlgorithmException the no such algorithm exception
@@ -115,7 +115,7 @@ public class RSAService {
 		BigInteger tmp;
 		BigInteger testRes;
 		while(true){
-			tmp = genPrime(KEY_SIZE/8);
+			tmp = genPrime(KEY_SIZE/4);
 			testRes = on.divideAndRemainder(tmp)[1];
 			if (testRes.compareTo(BigInteger.ZERO) != 0){
 				e = tmp;
