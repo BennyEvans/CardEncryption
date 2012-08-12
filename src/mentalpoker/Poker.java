@@ -13,6 +13,7 @@ public class Poker {
 	
 	/** The rsa service. */
 	RSAService rsaService;
+	public static String myUsername;
 	
 	/**
 	 * Instantiates a new game.
