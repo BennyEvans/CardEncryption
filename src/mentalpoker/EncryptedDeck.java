@@ -1,17 +1,16 @@
 package mentalpoker;
 
-import javax.crypto.SealedObject;
+import java.io.Serializable;
 
 /**
  * The Class EncryptedDeck.
  */
-public class EncryptedDeck implements java.io.Serializable{
+public class EncryptedDeck implements Serializable{
 
 	/** The Constant serialVersionUID. */
 	private static final long serialVersionUID = 7737144048645072557L;
 
-	
 	/** The encrypted cards. */
-	public SealedObject[] encCards = new SealedObject[Deck.NUM_CARDS];
+	public EncryptedCard[] encCards = new EncryptedCard[Deck.NUM_CARDS];
 	
 }

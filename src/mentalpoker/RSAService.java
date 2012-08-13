@@ -1,22 +1,21 @@
 package mentalpoker;
 
-import java.io.IOException;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
-import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
+import java.security.NoSuchProviderException;
+import java.security.Security;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.RSAPrivateKeySpec;
-import java.security.spec.RSAPublicKeySpec;
 import java.util.Random;
 
 import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SealedObject;
+
+import org.bouncycastle.crypto.engines.RSAEngine;
+import org.bouncycastle.crypto.params.RSAKeyParameters;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+
 
 /**
  * The Class RSAService.
@@ -29,16 +28,7 @@ public class RSAService {
 	/** The max encryption size. */
 	private static int MAX_ENC_SIZE = 128;
 	
-	/** The cipher. */
-	private Cipher cipher;
-	
-	/** The decryption key. */
-	private PrivateKey decKey;
-	
-	/** The encryption key. */
-	private PublicKey encKey;
-	
-	/** Standard RSA Variables */
+	/** Standard RSA Variables. */
 	private BigInteger p;
 	private BigInteger q;
 	private BigInteger n;
@@ -48,14 +38,15 @@ public class RSAService {
 	
 	
 	/**
-	 * Instantiates a new RSA service.
+	 * Instantiates a new rsa service.
 	 *
 	 * @throws InvalidKeySpecException the invalid key spec exception
 	 * @throws NoSuchAlgorithmException the no such algorithm exception
 	 * @throws NoSuchPaddingException the no such padding exception
+	 * @throws NoSuchProviderException the no such provider exception
 	 */
-	public RSAService() throws InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException {
-		cipher = Cipher.getInstance("RSA");
+	public RSAService() throws InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException {
+		Security.addProvider(new BouncyCastleProvider());
 		p = genPrime(KEY_SIZE/2);
 		q = genPrime(KEY_SIZE/2);
 		n = p.multiply(q);
@@ -66,18 +57,20 @@ public class RSAService {
 		genKeys();
 	    return;
 	}
+
 	
 	/**
-	 * Instantiates a new RSA service given p and q. Used to make RSA commutative.
+	 * Instantiates a new rsa service with given p and q.
 	 *
 	 * @param gp the given p
 	 * @param gq the given q
 	 * @throws InvalidKeySpecException the invalid key spec exception
 	 * @throws NoSuchAlgorithmException the no such algorithm exception
 	 * @throws NoSuchPaddingException the no such padding exception
+	 * @throws NoSuchProviderException the no such provider exception
 	 */
-	public RSAService(BigInteger gp, BigInteger gq) throws InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException {
-		cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+	public RSAService(BigInteger gp, BigInteger gq) throws InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException {
+		Security.addProvider(new BouncyCastleProvider());
 		this.p = new BigInteger(gp.toString());
 		this.q = new BigInteger(gq.toString());
 		n = p.multiply(q);
@@ -90,10 +83,30 @@ public class RSAService {
 	
 	
 	/**
-	 * Generate a large prime of size, size.
+	 * Gets the p value.
+	 *
+	 * @return the p value
+	 */
+	public BigInteger getP(){
+		return new BigInteger(this.p.toString());
+	}
+	
+	
+	/**
+	 * Gets the q value.
+	 *
+	 * @return the q value
+	 */
+	public BigInteger getQ(){
+		return new BigInteger(this.q.toString());
+	}
+	
+	
+	/**
+	 * Generates a prime.
 	 *
 	 * @param size the size
-	 * @return the large prime
+	 * @return the big integer
 	 */
 	private BigInteger genPrime(int size){
 		Random rnd = new Random();
@@ -103,10 +116,7 @@ public class RSAService {
 	
 	
 	/**
-	 * Generate encryption and decryption keys.
-	 * 
-	 * I have used a pretty dodgy way of generating e which makes the algorithm a little less secure.
-	 * At the moment e is chosen as a prime so as to make it more likely to be coprime to on.
+	 * Generates the keys.
 	 *
 	 * @throws NoSuchAlgorithmException the no such algorithm exception
 	 * @throws InvalidKeySpecException the invalid key spec exception
@@ -115,16 +125,11 @@ public class RSAService {
 		BigInteger tmp;
 		BigInteger testRes;
 		while(true){
-			tmp = genPrime(KEY_SIZE/4);
+			tmp = genPrime(KEY_SIZE/2);
 			testRes = on.divideAndRemainder(tmp)[1];
 			if (testRes.compareTo(BigInteger.ZERO) != 0){
 				e = tmp;
 				d = e.modInverse(on);
-				RSAPublicKeySpec pubKeySpec = new RSAPublicKeySpec(n,e);
-				RSAPrivateKeySpec privKeySpec = new RSAPrivateKeySpec(n,d);
-				KeyFactory fact = KeyFactory.getInstance("RSA");
-				encKey = fact.generatePublic(pubKeySpec);
-				decKey = fact.generatePrivate(privKeySpec);
 				return;
 			}
 		}
@@ -132,70 +137,115 @@ public class RSAService {
 	
 	
 	/**
-	 * Encrypt byte string.
+	 * Encrypts a byte string.
 	 *
-	 * @param data the data
-	 * @return the ciphertext
+	 * @param data the data to encrypt
+	 * @return the encrypted data
 	 * @throws InvalidKeyException the invalid key exception
 	 * @throws IllegalBlockSizeException the illegal block size exception
 	 * @throws BadPaddingException the bad padding exception
 	 */
 	public byte[] encrypt(byte[] data) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
 		if (data.length > MAX_ENC_SIZE){
-			//cannot not encrypt more than MAX_ENC_SIZE bytes
-			return null;
+			System.err.println("Data to long to encrypt. Reason: Possible cheating! Fix: Exit");
+			System.exit(1);
 		}
-		cipher.init(Cipher.ENCRYPT_MODE, encKey);
-		byte[] cText = cipher.doFinal(data);
+		
+		RSAKeyParameters kp = new RSAKeyParameters(false, n, e);
+		RSAEngine engine = new RSAEngine();
+		engine.init(true, kp);
+		byte[] cText = engine.processBlock(data, 0, data.length);
 		return cText;
 	}
 	
+	
 	/**
-	 * Decrypt byte string.
+	 * Decrypts a byte String
 	 *
-	 * @param data the data
-	 * @return the plaintext
+	 * @param data the data to decrypt
+	 * @return the decrypted data
 	 * @throws InvalidKeyException the invalid key exception
 	 * @throws IllegalBlockSizeException the illegal block size exception
 	 * @throws BadPaddingException the bad padding exception
 	 */
 	public byte[] decrypt(byte[] data) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
-	    cipher.init(Cipher.DECRYPT_MODE, decKey);
-	    byte[] dText = cipher.doFinal(data);
+		if (data.length > MAX_ENC_SIZE){
+			System.err.println("Data to long to decrypt. Reason: Possible cheating! Fix: Exit");
+			System.exit(1);
+		}
+		
+		RSAKeyParameters kp = new RSAKeyParameters(true, n, d);
+		RSAEngine engine = new RSAEngine();
+		engine.init(false, kp);
+		byte[] dText = engine.processBlock(data, 0, data.length);
 		return dText;
 	}
 	
-	/**
-	 * Encrypt a card.
-	 *
-	 * @param card the card
-	 * @return the sealed object
-	 * @throws InvalidKeyException the invalid key exception
-	 * @throws IllegalBlockSizeException the illegal block size exception
-	 * @throws IOException Signals that an I/O exception has occurred.
-	 */
-	public SealedObject encryptCard(Card card) throws InvalidKeyException, IllegalBlockSizeException, IOException{
-		cipher.init(Cipher.ENCRYPT_MODE, encKey);
-		SealedObject so = new SealedObject(card, cipher);
-		return so;
-	}
 	
 	/**
-	 * Decrypt a card.
+	 * Encrypts a card.
 	 *
-	 * @param so the so
-	 * @return the card
+	 * @param card the card to encrypt
+	 * @return the encrypted card
 	 * @throws InvalidKeyException the invalid key exception
 	 * @throws IllegalBlockSizeException the illegal block size exception
-	 * @throws IOException Signals that an I/O exception has occurred.
-	 * @throws ClassNotFoundException the class not found exception
 	 * @throws BadPaddingException the bad padding exception
 	 */
-	public Card decryptCard(SealedObject so) throws InvalidKeyException, IllegalBlockSizeException, IOException, ClassNotFoundException, BadPaddingException {
-	    cipher.init(Cipher.DECRYPT_MODE, decKey);
-	    Card card = (Card) so.getObject(cipher);
+	public EncryptedCard encryptCard(Card card) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+		String encCardData = String.valueOf(card.cardType) + card.suit;
+		EncryptedCard encCard = new EncryptedCard();
+		encCard.cardData = encrypt(encCardData.getBytes());
+		return encCard;
+	}
+	
+	
+	/**
+	 * Decrypts a card.
+	 *
+	 * @param encCard the encrypted card
+	 * @return the decrypted card
+	 * @throws InvalidKeyException the invalid key exception
+	 * @throws IllegalBlockSizeException the illegal block size exception
+	 * @throws BadPaddingException the bad padding exception
+	 */
+	public Card decryptCard(EncryptedCard encCard) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+	    String data = new String(decrypt(encCard.cardData));
+	    char type = data.charAt(0);
+	    String suit = data.substring(1).toString();
+	    Card card = new Card(type, suit);
 		return card;
 	}
 	
-
+	
+	/**
+	 * Encrypts an already encrypted card.
+	 *
+	 * @param card the encrypted card
+	 * @return the encrypted, encrypted card
+	 * @throws InvalidKeyException the invalid key exception
+	 * @throws IllegalBlockSizeException the illegal block size exception
+	 * @throws BadPaddingException the bad padding exception
+	 */
+	public EncryptedCard encryptEncCard(EncryptedCard card) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+		EncryptedCard encCard = new EncryptedCard();
+		encCard.cardData = encrypt(card.cardData);
+		return encCard;
+	}
+	
+	
+	/**
+	 * Decrypts an encrypted, encrypted card.
+	 *
+	 * @param encCard the encrypted, encrypted card
+	 * @return the encrypted card
+	 * @throws InvalidKeyException the invalid key exception
+	 * @throws IllegalBlockSizeException the illegal block size exception
+	 * @throws BadPaddingException the bad padding exception
+	 */
+	public EncryptedCard decryptEncCard(EncryptedCard encCard) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+		EncryptedCard card = new EncryptedCard();
+		card.cardData = decrypt(encCard.cardData);
+		return card;
+	}
+	
 }

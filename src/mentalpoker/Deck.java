@@ -5,8 +5,8 @@ import java.security.InvalidKeyException;
 import java.util.ArrayList;
 import java.util.Collections;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.SealedObject;
 
 /**
  * The Class Deck.
@@ -61,8 +61,9 @@ public class Deck {
 	 * @throws InvalidKeyException the invalid key exception
 	 * @throws IllegalBlockSizeException the illegal block size exception
 	 * @throws IOException Signals that an I/O exception has occurred.
+	 * @throws BadPaddingException 
 	 */
-	public SealedObject getEncryptedCard(int index) throws InvalidKeyException, IllegalBlockSizeException, IOException{
+	public EncryptedCard getEncryptedCard(int index) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException{
 		return this.rsaService.encryptCard(cardDeck.get(index));
 	}
 
