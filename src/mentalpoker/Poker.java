@@ -6,7 +6,6 @@ import java.security.InvalidKeyException;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 
-
 /**
  * The Class Poker.
  */
@@ -34,17 +33,21 @@ public class Poker {
 		//test of commutative RSA (encrypting and decrypting in a different order)
 		RSAService tmprsaService = new RSAService(rsaService.getP(), rsaService.getQ());
 		
+		System.out.println("Data after first encryption step: " + new String(encDeck.encCards[0].cardData) + "\n");
+		
 		//encrypt the already encrypted card again with another rsaservice (different key)
 		EncryptedCard deCard =  tmprsaService.encryptEncCard(encDeck.encCards[0]);
+		System.out.println("Data after second encryption step: " + new String(deCard.cardData) + "\n");
 		
 		//decrypt with the first rsaService
 		EncryptedCard ueCard = rsaService.decryptEncCard(deCard);
+		System.out.println("Data after decryption with first key (used in first encryption step): " + new String(ueCard.cardData) + "\n");
 		
 		//then decrypt with the second
 		Card c = tmprsaService.decryptCard(ueCard);
 		
 		//if this prints jiberish then something has gone wrong else all is sweet =)
-		System.out.println(String.valueOf(c.cardType) + " of " + c.suit);
+		System.out.println("Data after decryption with second key (used in second encryption step): " + String.valueOf(c.cardType) + " of " + c.suit);
 		
 	}
 	
