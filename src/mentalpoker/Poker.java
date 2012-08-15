@@ -23,11 +23,13 @@ public class Poker {
 	 */
 	public Poker(String ip) throws Exception {
 		rsaService = new RSAService();
+		User user = new User("Bob");
+		
 		EncryptedDeck encDeck = null;
 
 		if (ip == null){
 			System.out.println("No IP specified. Waiting for connections...\n");
-			encDeck = createDeck();
+			encDeck = createDeck(user);
 		}
 		
 		//test of commutative RSA (encrypting and decrypting in a different order)
@@ -60,8 +62,8 @@ public class Poker {
 	 * @throws IllegalBlockSizeException the illegal block size exception
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-	private EncryptedDeck createDeck() throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException{
-		Deck deck = new Deck(rsaService);
+	private EncryptedDeck createDeck(User user) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException{
+		Deck deck = new Deck(rsaService, user);
 		EncryptedDeck encDeck = new EncryptedDeck();
 		for (int i = 0; i < Deck.NUM_CARDS; i++){
 			encDeck.encCards[i] = deck.getEncryptedCard(i);

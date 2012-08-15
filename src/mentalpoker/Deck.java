@@ -19,6 +19,9 @@ public class Deck {
 	/** The rsa service. */
 	private RSAService rsaService;
 	
+	/** The current user. */
+	private User user;
+	
 	/** The number of cards in a deck. */
 	public static final int NUM_CARDS = 52;
 	
@@ -34,7 +37,7 @@ public class Deck {
 	 *
 	 * @param rsaService the rsa service
 	 */
-	public Deck(RSAService rsaService){
+	public Deck(RSAService rsaService, User user){
 		this.rsaService = rsaService;
 		//generate the 52 cards and shuffle them
 		for (int i = 0; i < suits.length; i++){
@@ -64,7 +67,9 @@ public class Deck {
 	 * @throws BadPaddingException 
 	 */
 	public EncryptedCard getEncryptedCard(int index) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException{
-		return this.rsaService.encryptCard(cardDeck.get(index));
+		EncryptedCard tmp = this.rsaService.encryptCard(cardDeck.get(index));
+		tmp.addEncUser(user);
+		return tmp;
 	}
 
 }
