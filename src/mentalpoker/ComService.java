@@ -1,6 +1,9 @@
 package mentalpoker;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.net.ConnectException;
 
 import org.avis.client.*;
@@ -12,6 +15,9 @@ public class ComService {
 	private String server;
 	private static String myUsername;
 	private Subscription gameSub;
+	private Timer gameNotificationTimer = new Timer();
+	private boolean gameIsFullOrWeAreHappy = false;
+	private ArrayList<String> currentGameMembers = new ArrayList<String>();
 	
 	public ComService()
 	{
@@ -35,11 +41,11 @@ public class ComService {
 	 * a new notification of the available game.
 	 * @return
 	 */
-	public boolean startNewGame()
+	public boolean startNewGame(final int numberOfSlots)
 	{
 		//Subscribe to responses bearing my username. This will be useful after we actually advertise the game.
 		try {
-			gameSub = elvin.subscribe ("Request == 'newGame' && OriginalUsername == '"+Poker.myUsername+"'");
+			gameSub = elvin.subscribe ("request == 'joinGame' && hostersUsername == '"+Poker.myUsername+"'");
 		} catch (InvalidSubscriptionException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -50,37 +56,42 @@ public class ComService {
 			return false;
 		}
 		
+		/**
+		 * Receive requests to join the game.
+		 */
 		gameSub.addListener(new NotificationListener() {
+			//This is called if we have a response requesting to join our game.
+			public void notificationReceived(NotificationEvent event)
+			{
+				if (event.notification.getString("hostersUsername").equals(Poker.myUsername) &&
+						(currentGameMembers.size() < numberOfSlots))
+				{
+					//This means that the notification by the client that they want to join in
+					//must have a field named "playerUsername" with their own username included.
+					currentGameMembers.add(event.notification.getString("playerUsername"));
+				}
+			}
+		});
 		
-	      public void notificationReceived(NotificationEvent event)
-	      {
-	        System.out.print ((char)event.notification.getInt ("Typed-Character"));
-	      }
-	    });
+
+		gameNotificationTimer.scheduleAtFixedRate(new TimerTask() {
+            public void run() {
+            	sendGameNotification();
+            }
+            private void sendGameNotification() {
+            	Notification gameNotification = new Notification();
+        		gameNotification.set("requesterUsername", Poker.myUsername);
+        		gameNotification.set("request", "newGame");
+        		try {
+        			elvin.send(gameNotification);
+        		} catch (IOException e) {
+        			// TODO Auto-generated catch block
+        			e.printStackTrace();
+        		}
+            }
+        }, 1000,1500);
 		
-		
-		Notification gameNotification = new Notification();
-		gameNotification.set("requesterUsername", Poker.myUsername);
-		gameNotification.set("request", "newGame");
-		try {
-			elvin.send(gameNotification);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return false;
-		}
-		return true;
-	}
-	
-	public static boolean requestConnectionToUsername(String username)
-	{
-		//Create new subscription to an appropriate response
-		
-		
-		
-		//Then send notification with remote username and my username.
-		
-		//Cancel subscription
+
 		return true;
 	}
 	
