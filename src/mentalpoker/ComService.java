@@ -2,6 +2,7 @@ package mentalpoker;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.net.ConnectException;
@@ -14,10 +15,13 @@ public class ComService {
 	private static Elvin elvin;
 	private String server;
 	private Subscription gameSub;
+	private Subscription gameAdvertisementSub;
+	private Subscription gameFullSub;
 	private Timer gameNotificationTimer = new Timer();
 	private boolean gameIsFullOrWeAreHappy = false;
 	private ArrayList<String> currentGameMembers = new ArrayList<String>();
 	private boolean thereHasBeenAnError = false;
+	private HashSet<String> availableGames = new HashSet<String>();
 	
 	public ComService()
 	{
@@ -36,6 +40,7 @@ public class ComService {
 			e.printStackTrace();
 		}
 	}
+	
 	/**
 	 * Starts a new game. First creates the subscription to the responses, then sends out
 	 * a new notification of the available game.
@@ -133,7 +138,54 @@ public class ComService {
 		}
 	}
 	
-	
+	public void joinGame()
+	{
+		thereHasBeenAnError = false;
+		System.out.println("Searching for available games...");
+		availableGames.clear();
+
+		//Subscribe to new game advertisement notifications
+		try {
+			gameAdvertisementSub = elvin.subscribe ("request == 'newGame'");
+		} catch (InvalidSubscriptionException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			thereHasBeenAnError = true;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			thereHasBeenAnError = true;
+		}
+		
+		//Subscribe to game full notifications.
+		try {
+			gameFullSub = elvin.subscribe("gameStatus == 'full'");
+		} catch (InvalidSubscriptionException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			thereHasBeenAnError = true;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			thereHasBeenAnError = true;
+		}
+		
+		
+		//Whenever a game notification is received, add it to the availableGames hashSet
+		/**
+		 * Receive requests to join the game.
+		 */
+		gameAdvertisementSub.addListener(new NotificationListener() {
+			//This is called if we have a response requesting to join our game.
+			public void notificationReceived(NotificationEvent event)
+			{
+				availableGames.add(event.notification.getString("hostersUsername"));
+			}
+			
+		});
+		
+		
+	}
 	
 	
 	
