@@ -12,12 +12,13 @@ import javax.crypto.IllegalBlockSizeException;
  * The Class Poker.
  */
 public class Poker {
-	
+
 	/** The rsa service. */
 	RSAService rsaService;
 	ComService com;
 	public static String myUsername;
-	
+	private String chosenGameHostname;
+
 	/**
 	 * Instantiates a new game.
 	 *
@@ -25,48 +26,66 @@ public class Poker {
 	 * @throws Exception the exception
 	 */
 	public Poker(String ip) throws Exception {
-		
+
 		rsaService = new RSAService();
 		com = new ComService();
-		
+
 		User user = new User("Bob");
-		
+
 		EncryptedDeck encDeck = null;
 
 		if (ip == null){
 			System.out.println("No IP specified. Waiting for connections...\n");
 			encDeck = createDeck(user);
 		}
-		
+
 		//test of commutative RSA (encrypting and decrypting in a different order)
 		RSAService tmprsaService = new RSAService(rsaService.getP(), rsaService.getQ());
-		
+
 		System.out.println("Data after first encryption step: " + new String(encDeck.encCards[0].cardData) + "\n");
-		
+
 		//encrypt the already encrypted card again with another rsaservice (different key)
 		EncryptedCard deCard =  tmprsaService.encryptEncCard(encDeck.encCards[0]);
 		System.out.println("Data after second encryption step: " + new String(deCard.cardData) + "\n");
-		
+
 		//decrypt with the first rsaService
 		EncryptedCard ueCard = rsaService.decryptEncCard(deCard);
 		System.out.println("Data after decryption with first key (used in first encryption step): " + new String(ueCard.cardData) + "\n");
-		
+
 		//then decrypt with the second
 		Card c = tmprsaService.decryptCard(ueCard);
-		
+
 		//if this prints jiberish then something has gone wrong else all is sweet =)
 		System.out.println("Data after decryption with second key (used in second encryption step): " + String.valueOf(c.cardType) + " of " + c.suit);
-		
+
 		MiscHelper.clearConsole();
-		
+
 		//Get player's username.
 		setUsername();
-		
-		//Testing startNewGame.
-		com.startNewGame(5);
-		
+
+
+		while (true)
+		{
+			//Menu choice becomes the integer chosen by the user.
+			int menuChoice = MenuOptions.printMainMenu();
+
+			if (menuChoice == 1)
+			{
+				com.startNewGame(MenuOptions.startNewGameMenu());
+			} else if (menuChoice == 2) {
+				chosenGameHostname = com.joinGameOffMenu();
+			} else if (menuChoice == Integer.MIN_VALUE)
+			{
+				System.err.println("Sorry, I was unable to recognise what you input as a number. Try numbers, like 1,2,3 etc.");
+			}
+
+			//Testing startNewGame.
+			//com.startNewGame(5);
+		}
+
+
 	}
-	
+
 	/**
 	 * Creates the deck.
 	 *
@@ -84,7 +103,7 @@ public class Poker {
 		}
 		return encDeck;
 	}
-	
+
 	/**
 	 * The main method.
 	 *
@@ -97,12 +116,12 @@ public class Poker {
 				ip = args[0];
 			}
 			new Poker(ip);
-			
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public static void setUsername()
 	{
 		System.out.print("Enter your username: ");
