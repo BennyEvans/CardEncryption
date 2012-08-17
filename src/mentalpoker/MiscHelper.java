@@ -1,6 +1,4 @@
 package mentalpoker;
-import java.lang.*;
-import java.io.Console;
 
 
 /**
