@@ -52,6 +52,11 @@ public class ComService {
 	 */
 	public boolean startNewGame(final int numberOfSlots)
 	{
+		if (Poker.myUsername == null)
+		{
+			System.err.println("You cannot have an empty username.");
+			return false;
+		}
 		//Check that there is a sufficient number of slots specified
 		if (numberOfSlots < 1)
 		{
@@ -213,18 +218,8 @@ public class ComService {
 		
 		gameNotificationTimer.scheduleAtFixedRate(new TimerTask() {
             public void run() {
-            	clearConsole();
+            	MiscHelper.clearConsole();
             	writeCurrentAvailableGames();
-            }
-            
-            //This is stupid, I wish java would let you do otherwise.
-            private void clearConsole()
-            {
-            	for (int i = 0; i < 100; i++)
-            	{
-            		System.out.println("\n");
-            	}
-            	
             }
 
             private void writeCurrentAvailableGames()

@@ -1,6 +1,8 @@
 package mentalpoker;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.security.InvalidKeyException;
 
 import javax.crypto.BadPaddingException;
@@ -13,6 +15,7 @@ public class Poker {
 	
 	/** The rsa service. */
 	RSAService rsaService;
+	ComService com;
 	public static String myUsername;
 	
 	/**
@@ -22,7 +25,10 @@ public class Poker {
 	 * @throws Exception the exception
 	 */
 	public Poker(String ip) throws Exception {
+		
 		rsaService = new RSAService();
+		com = new ComService();
+		
 		User user = new User("Bob");
 		
 		EncryptedDeck encDeck = null;
@@ -50,6 +56,14 @@ public class Poker {
 		
 		//if this prints jiberish then something has gone wrong else all is sweet =)
 		System.out.println("Data after decryption with second key (used in second encryption step): " + String.valueOf(c.cardType) + " of " + c.suit);
+		
+		MiscHelper.clearConsole();
+		
+		//Get player's username.
+		setUsername();
+		
+		//Testing startNewGame.
+		com.startNewGame(5);
 		
 	}
 	
@@ -86,6 +100,20 @@ public class Poker {
 			
 		} catch (Exception e) {
 			e.printStackTrace();
+		}
+	}
+	
+	public static void setUsername()
+	{
+		System.out.print("Enter your username: ");
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+
+		try {
+			myUsername = br.readLine();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.err.println("UNABLE TO READ FROM COMMAND LINE");
 		}
 	}
 
