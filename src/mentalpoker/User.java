@@ -23,6 +23,17 @@ public class User implements Serializable{
 	}
 	
 	/**
+	 * Instantiates a new user.
+	 *
+	 * @param name the name of the user
+	 * @param uuid the uuid of the user
+	 */
+	public User(String name, String uuid){
+		this.name = name.toString();
+		this.id = uuid.toString();
+	}
+	
+	/**
 	 * Gets the username.
 	 *
 	 * @return the username
