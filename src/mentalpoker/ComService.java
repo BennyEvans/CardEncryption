@@ -138,7 +138,7 @@ public class ComService {
 		}
 	}
 	
-	public void joinGame()
+	public boolean joinGame()
 	{
 		thereHasBeenAnError = false;
 		System.out.println("Searching for available games...");
@@ -148,11 +148,11 @@ public class ComService {
 		try {
 			gameAdvertisementSub = elvin.subscribe ("request == 'newGame'");
 		} catch (InvalidSubscriptionException e) {
-			// TODO Auto-generated catch block
+
 			e.printStackTrace();
 			thereHasBeenAnError = true;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+
 			e.printStackTrace();
 			thereHasBeenAnError = true;
 		}
@@ -184,7 +184,32 @@ public class ComService {
 			
 		});
 		
+		/**
+		 * If a game is reported as full, remove it from the available games list.
+		 */
+		gameFullSub.addListener(new NotificationListener() {
+			public void notificationReceived(NotificationEvent event)
+			{
+				availableGames.remove(event.notification.getString("hostersUsername"));
+			}
+			
+		});
 		
+		/**
+		 * We want to repeatedly clear the screen,
+		 * and print out the available games and a prompt asking which username to connect to.
+		 */
+		
+		
+		
+		
+		if (!thereHasBeenAnError)
+		{
+			return true;
+		} else {
+			thereHasBeenAnError = false;
+			return false;
+		}
 	}
 	
 	
