@@ -16,7 +16,7 @@ public class Poker {
 	/** The rsa service. */
 	RSAService rsaService;
 	ComService com;
-	public static String myUsername;
+	private User gameUser;
 	private String chosenGameHostname;
 
 	/**
@@ -25,20 +25,23 @@ public class Poker {
 	 * @param ip the ip to connect to
 	 * @throws Exception the exception
 	 */
-	public Poker(String ip) throws Exception {
+	public Poker() throws Exception {
+		
+		setUsername();
 
 		rsaService = new RSAService();
-		com = new ComService();
-
-		User user = new User("Bob");
+		com = new ComService(gameUser);
+		
 
 		EncryptedDeck encDeck = null;
 
-		if (ip == null){
-			System.out.println("No IP specified. Waiting for connections...\n");
-			encDeck = createDeck(user);
-		}
-
+		//if (ip == null){
+		//	System.out.println("No IP specified. Waiting for connections...\n");
+		
+		//this needs to be done when a user creates a game (the game owner is the one who creates the deck)
+		encDeck = createDeck(gameUser);
+		//}
+		/*
 		//test of commutative RSA (encrypting and decrypting in a different order)
 		RSAService tmprsaService = new RSAService(rsaService.getP(), rsaService.getQ());
 
@@ -57,11 +60,10 @@ public class Poker {
 
 		//if this prints jiberish then something has gone wrong else all is sweet =)
 		System.out.println("Data after decryption with second key (used in second encryption step): " + String.valueOf(c.cardType) + " of " + c.suit);
-
+		*/
 		MiscHelper.clearConsole();
 
 		//Get player's username.
-		setUsername();
 
 
 		while (true)
@@ -76,7 +78,7 @@ public class Poker {
 				chosenGameHostname = com.joinGameOffMenu();
 			} else if (menuChoice == Integer.MIN_VALUE)
 			{
-				System.err.println("Sorry, I was unable to recognise what you input as a number. Try numbers, like 1,2,3 etc.");
+				System.err.println("Sorry, I was unable to recognise what your input as a number. Try numbers, like 1,2,3 etc.");
 			}
 
 			//Testing startNewGame.
@@ -111,24 +113,21 @@ public class Poker {
 	 */
 	public static void main(String[] args) {
 		try {
-			String ip = null;
-			if (args.length == 1){
-				ip = args[0];
-			}
-			new Poker(ip);
+			
+			new Poker();
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	public static void setUsername()
+	public void setUsername()
 	{
 		System.out.print("Enter your username: ");
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
 		try {
-			myUsername = br.readLine();
+			gameUser = new User(br.readLine());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

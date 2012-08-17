@@ -17,6 +17,7 @@ import org.avis.common.InvalidURIException;
 
 public class ComService {
 
+	private User user;
 	private static Elvin elvin;
 	private String server;
 	private Subscription gameSub;
@@ -32,9 +33,10 @@ public class ComService {
 	private final ScheduledExecutorService scheduler =
 		     Executors.newScheduledThreadPool(1);
 	
-	public ComService()
+	public ComService(User user)
 	{
-		server = "elvin://elvin.students.itee.uq.edu.au";
+		this.user = user;
+		this.server = "elvin://elvin.students.itee.uq.edu.au";
 		notificationHandle = null;
 		try {
 			elvin = new Elvin(server);
@@ -58,7 +60,7 @@ public class ComService {
 	public boolean startNewGame(final int numberOfSlots)
 	{
 		gameHasFilled = false;
-		if (Poker.myUsername == null)
+		if (user.getUsername() == null)
 		{
 			System.err.println("You cannot have an empty username.");
 			return false;
@@ -75,7 +77,7 @@ public class ComService {
 		
 		//Subscribe to responses bearing my username. This will be useful after we actually advertise the game.
 		try {
-			gameSub = elvin.subscribe("request == 'newGame' && hostersUsername == '"+Poker.myUsername+"'");
+			gameSub = elvin.subscribe("request == 'newGame' && hostersUsername == '"+user.getUsername()+"'");
 		} catch (InvalidSubscriptionException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -105,7 +107,7 @@ public class ComService {
 				} else {
 					System.out.println("DEBUG: Attempt to join, but either did not match username or is full.");
 	            	Notification gameFullNotification = new Notification();
-	            	gameFullNotification.set("requesterUsername", Poker.myUsername);
+	            	gameFullNotification.set("requesterUsername", user.getUsername());
 	            	gameFullNotification.set("gameStatus", "full");	
 	            	try {
 						elvin.send(gameFullNotification);
@@ -138,7 +140,7 @@ public class ComService {
 			
 			private void sendGameNotification() {
             	Notification gameNotification = new Notification();
-        		gameNotification.set("hostUsername", Poker.myUsername);
+        		gameNotification.set("hostUsername", user.getUsername());
         		gameNotification.set("request", "newGame");
         		try {
         			elvin.send(gameNotification);
@@ -294,7 +296,7 @@ public class ComService {
 	{
 		Notification joinGameNotificationToHost = new Notification();
     	joinGameNotificationToHost.set("hostersUsername", chosenGameHostUsername);
-    	joinGameNotificationToHost.set("playerUsername", Poker.myUsername);
+    	joinGameNotificationToHost.set("playerUsername", user.getUsername());
     	joinGameNotificationToHost.set("request", "newGame");
 		try {
 			elvin.send(joinGameNotificationToHost);
