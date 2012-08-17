@@ -17,7 +17,7 @@ public class Poker {
 	RSAService rsaService;
 	ComService com;
 	private User gameUser;
-	private String chosenGameHostname;
+	//private String chosenGameHostname;
 
 	/**
 	 * Instantiates a new game.
@@ -75,7 +75,7 @@ public class Poker {
 			{
 				com.startNewGame(MenuOptions.startNewGameMenu());
 			} else if (menuChoice == 2) {
-				chosenGameHostname = com.joinGameOffMenu();
+				com.joinGameOffMenu();
 			} else if (menuChoice == Integer.MIN_VALUE)
 			{
 				System.err.println("Sorry, I was unable to recognise what your input as a number. Try numbers, like 1,2,3 etc.");

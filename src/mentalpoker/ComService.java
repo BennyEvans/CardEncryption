@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -23,33 +22,39 @@ public class ComService {
 	private Subscription gameSub;
 	private Subscription gameAdvertisementSub;
 	private Subscription gameFullSub;
-	private ArrayList<String> currentGameMembers = new ArrayList<String>();
+	private ArrayList<User> currentGameMembers = new ArrayList<User>();
+	//private ArrayList<String> currentGameMembers = new ArrayList<String>();
 	private boolean thereHasBeenAnError = false;
-	private HashSet<String> availableGames = new HashSet<String>();
-	private String chosenGameHostUsername = "";
+	private ArrayList<User> availableGames = new ArrayList<User>();
+	//private HashSet<String> availableGames = new HashSet<String>();
+	//private String chosenGameHostUsername = "";
+	private User gameHost;
 	boolean gameHasFilled = false;
 	ScheduledFuture<?> notificationHandle;
 	
 	private final ScheduledExecutorService scheduler =
 		     Executors.newScheduledThreadPool(1);
 	
-	public ComService(User user)
+	
+	private User findGameHostByID(String gameHostID){
+		for (int i = 0; i < availableGames.size(); i++){
+			if (availableGames.get(i).getID().equals(gameHostID)){
+				return availableGames.get(i);
+			}
+		}
+		return null;
+	}
+	
+	
+	
+	public ComService(User user) throws ConnectException, InvalidURIException, IllegalArgumentException, IOException
 	{
 		this.user = user;
 		this.server = "elvin://elvin.students.itee.uq.edu.au";
 		notificationHandle = null;
-		try {
-			elvin = new Elvin(server);
-			elvin.closeOnExit();
-		} catch (ConnectException e) {
-			e.printStackTrace();
-		} catch (InvalidURIException e) {
-			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		
+		elvin = new Elvin(server);
+		elvin.closeOnExit();
 	}
 	
 	/**
@@ -77,12 +82,8 @@ public class ComService {
 		
 		//Subscribe to responses bearing my username. This will be useful after we actually advertise the game.
 		try {
-			gameSub = elvin.subscribe("request == 'newGame' && hostersUsername == '"+user.getUsername()+"'");
-		} catch (InvalidSubscriptionException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			thereHasBeenAnError = true;
-		} catch (IOException e) {
+			gameSub = elvin.subscribe("request == 'newGame' && hostersUUID == '"+user.getID()+"'");
+		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			thereHasBeenAnError = true;
@@ -101,7 +102,8 @@ public class ComService {
 				{
 					//This means that the notification by the client that they want to join in
 					//must have a field named "playerUsername" with their own username included.
-					currentGameMembers.add(event.notification.getString("playerUsername"));
+					User tmpUser = new User(event.notification.getString("playerUsername"), event.notification.getString("playerUUID"));
+					currentGameMembers.add(tmpUser);
 					String numberOfSlotsLeft = Integer.toString(numberOfSlots - currentGameMembers.size());
 					System.out.println(event.notification.getString("playerUsername") + " connected... " + numberOfSlotsLeft + " slots left.");
 				} else {
@@ -140,6 +142,7 @@ public class ComService {
 			
 			private void sendGameNotification() {
             	Notification gameNotification = new Notification();
+        		gameNotification.set("hostUUID", user.getID());
         		gameNotification.set("hostUsername", user.getUsername());
         		gameNotification.set("request", "newGame");
         		try {
@@ -171,7 +174,7 @@ public class ComService {
 		}
 	}
 	
-	public String joinGameOffMenu()
+	public boolean joinGameOffMenu()
 	{
 		thereHasBeenAnError = false;
 		System.out.println("Searching for available games...");
@@ -209,7 +212,14 @@ public class ComService {
 			//This is called if we have a response requesting to join our game.
 			public void notificationReceived(NotificationEvent event)
 			{
-				availableGames.add(event.notification.getString("hostUsername"));
+				
+				//WHY IS THIS NULL AFTER JOINING A GAME???
+				System.out.println(event.notification.getString("hostUsername"));
+				System.out.println(event.notification.getString("hostUUID"));
+				User tmpUser = new User(event.notification.getString("hostUsername"), event.notification.getString("hostUUID"));
+				if (findGameHostByID(tmpUser.getID()) == null ) {
+					availableGames.add(tmpUser);
+				}
 			}
 			
 		});
@@ -220,7 +230,9 @@ public class ComService {
 		gameFullSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent event)
 			{
-				availableGames.remove(event.notification.getString("hostUsername"));
+				//may need to change this
+				User tmpUser = new User(event.notification.getString("hostUsername"), event.notification.getString("hostUUID"));
+				availableGames.remove(tmpUser);
 			}
 			
 		});
@@ -245,12 +257,14 @@ public class ComService {
 			private void writeCurrentAvailableGames()
 			{
 				System.out.println("Games available:");
-				Iterator itr = availableGames.iterator();
+				Iterator<User> itr = availableGames.iterator();
+				int i = 0;
 				while (itr.hasNext())
 				{
-					System.out.println(itr.next());
+					System.out.println(String.valueOf(i) + " " + itr.next().getUsername());
+					i++;
 				}
-				System.out.print("Choose a game (enter the username of the player hosting): ");
+				System.out.print("Choose a game (enter the number): ");
 
 			}
 		};
@@ -259,12 +273,17 @@ public class ComService {
 		
 		//Grab the username of the hoster
 		try {
-			chosenGameHostUsername = br.readLine();
+
+			gameHost = availableGames.get(Integer.parseInt(br.readLine()));
+			if (gameHost == null){
+				System.out.println("returned NULL!");
+			}
 			notificationHandle.cancel(true);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return "UNABLE TO READ FROM COMMAND LINE";
+			//unable to read from command line
+			return false;
 		}
 		
 		/*
@@ -285,18 +304,21 @@ public class ComService {
 		if (!thereHasBeenAnError)
 		{
 			
-			return chosenGameHostUsername;
+			return true;
 		} else {
 			thereHasBeenAnError = false;
-			return "ERR";
+			//error
+			return false;
 		}
 	}
 	
 	public void joinGame()
 	{
 		Notification joinGameNotificationToHost = new Notification();
-    	joinGameNotificationToHost.set("hostersUsername", chosenGameHostUsername);
+    	joinGameNotificationToHost.set("hostersUsername", gameHost.getUsername());
+    	joinGameNotificationToHost.set("hostersUUID", gameHost.getID());
     	joinGameNotificationToHost.set("playerUsername", user.getUsername());
+    	joinGameNotificationToHost.set("playerUUID", user.getID());
     	joinGameNotificationToHost.set("request", "newGame");
 		try {
 			elvin.send(joinGameNotificationToHost);
@@ -309,9 +331,6 @@ public class ComService {
 		//TODO: Expand this to stay within this method until game has been set up.
 		
 	}
-	
-	
-	
 	
 	
 }
