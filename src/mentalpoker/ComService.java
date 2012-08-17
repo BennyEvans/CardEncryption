@@ -6,8 +6,10 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.net.ConnectException;
 
 import org.avis.client.*;
@@ -20,17 +22,20 @@ public class ComService {
 	private Subscription gameSub;
 	private Subscription gameAdvertisementSub;
 	private Subscription gameFullSub;
-	private Timer gameNotificationTimer = new Timer();
-	private boolean gameIsFullOrWeAreHappy = false;
 	private ArrayList<String> currentGameMembers = new ArrayList<String>();
 	private boolean thereHasBeenAnError = false;
 	private HashSet<String> availableGames = new HashSet<String>();
 	private String chosenGameHostUsername = "";
+	boolean gameHasFilled = false;
+	ScheduledFuture<?> notificationHandle;
+	
+	private final ScheduledExecutorService scheduler =
+		     Executors.newScheduledThreadPool(1);
 	
 	public ComService()
 	{
 		server = "elvin://elvin.students.itee.uq.edu.au";
-		
+		notificationHandle = null;
 		try {
 			elvin = new Elvin(server);
 			elvin.closeOnExit();
@@ -52,6 +57,7 @@ public class ComService {
 	 */
 	public boolean startNewGame(final int numberOfSlots)
 	{
+		gameHasFilled = false;
 		if (Poker.myUsername == null)
 		{
 			System.err.println("You cannot have an empty username.");
@@ -69,7 +75,7 @@ public class ComService {
 		
 		//Subscribe to responses bearing my username. This will be useful after we actually advertise the game.
 		try {
-			gameSub = elvin.subscribe ("request == 'joinGame' && hostersUsername == '"+Poker.myUsername+"'");
+			gameSub = elvin.subscribe("request == 'newGame' && hostersUsername == '"+Poker.myUsername+"'");
 		} catch (InvalidSubscriptionException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -89,8 +95,7 @@ public class ComService {
 			//This is called if we have a response requesting to join our game.
 			public void notificationReceived(NotificationEvent event)
 			{
-				if (event.notification.getString("hostersUsername").equals(Poker.myUsername) &&
-						(currentGameMembers.size() < numberOfSlots))
+				if (currentGameMembers.size() < numberOfSlots)
 				{
 					//This means that the notification by the client that they want to join in
 					//must have a field named "playerUsername" with their own username included.
@@ -98,6 +103,7 @@ public class ComService {
 					String numberOfSlotsLeft = Integer.toString(numberOfSlots - currentGameMembers.size());
 					System.out.println(event.notification.getString("playerUsername") + " connected... " + numberOfSlotsLeft + " slots left.");
 				} else {
+					System.out.println("DEBUG: Attempt to join, but either did not match username or is full.");
 	            	Notification gameFullNotification = new Notification();
 	            	gameFullNotification.set("requesterUsername", Poker.myUsername);
 	            	gameFullNotification.set("gameStatus", "full");	
@@ -115,18 +121,24 @@ public class ComService {
 		/**
 		 * At 1500ms intervals, notify potential players that there is a game available.
 		 */
-		gameNotificationTimer.scheduleAtFixedRate(new TimerTask() {
-            public void run() {
+		
+		//New timer code.
+		
+		final Runnable notifyPotentialJoiners = new Runnable() {
+			public void run()
+			{
             	if (currentGameMembers.size() >= numberOfSlots)
             	{
-            		gameNotificationTimer.cancel();
+            		notificationHandle.cancel(true);
+            		gameHasFilled = true;
             	} else {
                 	sendGameNotification();
             	}
-            }
-            private void sendGameNotification() {
+			}
+			
+			private void sendGameNotification() {
             	Notification gameNotification = new Notification();
-        		gameNotification.set("requesterUsername", Poker.myUsername);
+        		gameNotification.set("hostUsername", Poker.myUsername);
         		gameNotification.set("request", "newGame");
         		try {
         			elvin.send(gameNotification);
@@ -136,7 +148,17 @@ public class ComService {
         			thereHasBeenAnError = true;
         		}
             }
-        }, 1000,1500);
+		};
+		
+		notificationHandle = scheduler.scheduleAtFixedRate(notifyPotentialJoiners, 1000,1500,TimeUnit.MILLISECONDS);
+		
+		
+		try {
+			scheduler.awaitTermination(6, TimeUnit.MINUTES);
+		} catch (InterruptedException e) {
+			thereHasBeenAnError = true;
+			e.printStackTrace();
+		}
 		
 		if (!thereHasBeenAnError)
 		{
@@ -147,7 +169,7 @@ public class ComService {
 		}
 	}
 	
-	public String joinGame()
+	public String joinGameOffMenu()
 	{
 		thereHasBeenAnError = false;
 		System.out.println("Searching for available games...");
@@ -181,14 +203,11 @@ public class ComService {
 		
 		
 		//Whenever a game notification is received, add it to the availableGames hashSet
-		/**
-		 * Receive requests to join the game.
-		 */
 		gameAdvertisementSub.addListener(new NotificationListener() {
 			//This is called if we have a response requesting to join our game.
 			public void notificationReceived(NotificationEvent event)
 			{
-				availableGames.add(event.notification.getString("hostersUsername"));
+				availableGames.add(event.notification.getString("hostUsername"));
 			}
 			
 		});
@@ -199,7 +218,7 @@ public class ComService {
 		gameFullSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent event)
 			{
-				availableGames.remove(event.notification.getString("hostersUsername"));
+				availableGames.remove(event.notification.getString("hostUsername"));
 			}
 			
 		});
@@ -208,46 +227,62 @@ public class ComService {
 		
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		
-		
-		
-		
 		/**
 		 * We want to repeatedly clear the screen,
 		 * and print out the available games and a prompt asking which username to connect to.
 		 */
 		
-		gameNotificationTimer.scheduleAtFixedRate(new TimerTask() {
-            public void run() {
-            	MiscHelper.clearConsole();
+		
+		final Runnable checkForAvailableGames = new Runnable() {
+			public void run()
+			{
+				MiscHelper.clearConsole();
             	writeCurrentAvailableGames();
-            }
+			}
+			
+			private void writeCurrentAvailableGames()
+			{
+				System.out.println("Games available:");
+				Iterator itr = availableGames.iterator();
+				while (itr.hasNext())
+				{
+					System.out.println(itr.next());
+				}
+				System.out.print("Choose a game (enter the username of the player hosting): ");
 
-            private void writeCurrentAvailableGames()
-            {
-            	System.out.println("Games available:");
-            	Iterator itr = availableGames.iterator();
-            	while (itr.hasNext())
-            	{
-            		System.out.println(itr.next());
-            	}
-            	System.out.println("Choose a game (enter the username of the player hosting): ");
-            	
-            }
-        }, 1000,1500);
+			}
+		};
 		
+		notificationHandle = scheduler.scheduleAtFixedRate(checkForAvailableGames, 300,500,TimeUnit.MILLISECONDS);
 		
+		//Grab the username of the hoster
 		try {
 			chosenGameHostUsername = br.readLine();
+			notificationHandle.cancel(true);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return "UNABLE TO READ FROM COMMAND LINE";
 		}
-	         
+		
+		/*
+		 * At this point, we wish to notify the host that we wish to join their game.
+		 */
+		
+    	joinGame();
+		
+		//Or cancel with a timeout of 6 minutes if it goes on too long.
+		try {
+			scheduler.awaitTermination(6, TimeUnit.MINUTES);
+		} catch (InterruptedException e) {
+			thereHasBeenAnError = true;
+			e.printStackTrace();
+		}
 		
 		
 		if (!thereHasBeenAnError)
 		{
+			
 			return chosenGameHostUsername;
 		} else {
 			thereHasBeenAnError = false;
@@ -255,6 +290,23 @@ public class ComService {
 		}
 	}
 	
+	public void joinGame()
+	{
+		Notification joinGameNotificationToHost = new Notification();
+    	joinGameNotificationToHost.set("hostersUsername", chosenGameHostUsername);
+    	joinGameNotificationToHost.set("playerUsername", Poker.myUsername);
+    	joinGameNotificationToHost.set("request", "newGame");
+		try {
+			elvin.send(joinGameNotificationToHost);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			thereHasBeenAnError = true;
+		}
+		
+		//TODO: Expand this to stay within this method until game has been set up.
+		
+	}
 	
 	
 	
