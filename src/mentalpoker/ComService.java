@@ -1,8 +1,11 @@
 package mentalpoker;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.net.ConnectException;
@@ -22,6 +25,7 @@ public class ComService {
 	private ArrayList<String> currentGameMembers = new ArrayList<String>();
 	private boolean thereHasBeenAnError = false;
 	private HashSet<String> availableGames = new HashSet<String>();
+	private String chosenGameHostUsername = "";
 	
 	public ComService()
 	{
@@ -138,7 +142,7 @@ public class ComService {
 		}
 	}
 	
-	public boolean joinGame()
+	public String joinGame()
 	{
 		thereHasBeenAnError = false;
 		System.out.println("Searching for available games...");
@@ -195,20 +199,64 @@ public class ComService {
 			
 		});
 		
+
+		
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		
+		
+		
+		
 		/**
 		 * We want to repeatedly clear the screen,
 		 * and print out the available games and a prompt asking which username to connect to.
 		 */
 		
+		gameNotificationTimer.scheduleAtFixedRate(new TimerTask() {
+            public void run() {
+            	clearConsole();
+            	writeCurrentAvailableGames();
+            }
+            
+            //This is stupid, I wish java would let you do otherwise.
+            private void clearConsole()
+            {
+            	for (int i = 0; i < 100; i++)
+            	{
+            		System.out.println("\n");
+            	}
+            	
+            }
+
+            private void writeCurrentAvailableGames()
+            {
+            	System.out.println("Games available:");
+            	Iterator itr = availableGames.iterator();
+            	while (itr.hasNext())
+            	{
+            		System.out.println(itr.next());
+            	}
+            	System.out.println("Choose a game (enter the username of the player hosting): ");
+            	
+            }
+        }, 1000,1500);
 		
+		
+		try {
+			chosenGameHostUsername = br.readLine();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return "UNABLE TO READ FROM COMMAND LINE";
+		}
+	         
 		
 		
 		if (!thereHasBeenAnError)
 		{
-			return true;
+			return chosenGameHostUsername;
 		} else {
 			thereHasBeenAnError = false;
-			return false;
+			return "ERR";
 		}
 	}
 	
