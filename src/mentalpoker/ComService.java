@@ -82,7 +82,7 @@ public class ComService {
 		
 		//Subscribe to responses bearing my username. This will be useful after we actually advertise the game.
 		try {
-			gameSub = elvin.subscribe("request == 'newGame' && hostersUUID == '"+user.getID()+"'");
+			gameSub = elvin.subscribe("request == 'newGame' && hostUUID == '"+user.getID()+"'");
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -214,6 +214,7 @@ public class ComService {
 			{
 				
 				//WHY IS THIS NULL AFTER JOINING A GAME???
+				//Because the notification being put in doesn't use the string "hostUsername".
 				System.out.println(event.notification.getString("hostUsername"));
 				System.out.println(event.notification.getString("hostUUID"));
 				User tmpUser = new User(event.notification.getString("hostUsername"), event.notification.getString("hostUUID"));
@@ -284,6 +285,10 @@ public class ComService {
 			e.printStackTrace();
 			//unable to read from command line
 			return false;
+		} catch (NumberFormatException e)
+		{
+			System.err.println("Your input was not a number!");
+			return false;
 		}
 		
 		/*
@@ -314,19 +319,35 @@ public class ComService {
 	
 	public void joinGame()
 	{
-		Notification joinGameNotificationToHost = new Notification();
-    	joinGameNotificationToHost.set("hostersUsername", gameHost.getUsername());
-    	joinGameNotificationToHost.set("hostersUUID", gameHost.getID());
-    	joinGameNotificationToHost.set("playerUsername", user.getUsername());
-    	joinGameNotificationToHost.set("playerUUID", user.getID());
-    	joinGameNotificationToHost.set("request", "newGame");
-		try {
-			elvin.send(joinGameNotificationToHost);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			thereHasBeenAnError = true;
+
+		if (gameHost.getUsername() == null)
+		{
+			System.out.println("Not able to get the game host's username.");
+		} else if (gameHost.getID() == null)
+		{
+			System.out.println("Not able to get the game host's id.");
+		} else if (user.getUsername() == null)
+		{
+			System.out.println("Not able to get the user's username.");
+		} else if (user.getID() == null)
+		{
+			System.out.println("Not able to get your ID.");
+		} else {
+			Notification joinGameNotificationToHost = new Notification();
+	    	joinGameNotificationToHost.set("hostUsername", gameHost.getUsername());
+	    	joinGameNotificationToHost.set("hostUUID", gameHost.getID());
+	    	joinGameNotificationToHost.set("playerUsername", user.getUsername());
+	    	joinGameNotificationToHost.set("playerUUID", user.getID());
+	    	joinGameNotificationToHost.set("request", "newGame");
+			try {
+				elvin.send(joinGameNotificationToHost);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				thereHasBeenAnError = true;
+			}
 		}
+
 		
 		//TODO: Expand this to stay within this method until game has been set up.
 		
