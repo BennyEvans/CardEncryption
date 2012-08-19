@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.InvalidKeyException;
+import java.util.ArrayList;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -15,14 +16,17 @@ public class Poker {
 
 	/** The rsa service. */
 	RSAService rsaService;
+	
+	/** The com. */
 	ComService com;
+	
+	/** The game user. */
 	private User gameUser;
-	//private String chosenGameHostname;
+
 
 	/**
 	 * Instantiates a new game.
 	 *
-	 * @param ip the ip to connect to
 	 * @throws Exception the exception
 	 */
 	public Poker() throws Exception {
@@ -31,71 +35,74 @@ public class Poker {
 
 		rsaService = new RSAService();
 		com = new ComService(gameUser);
+
+		StartGame();
 		
-
-		EncryptedDeck encDeck = null;
-
-		//if (ip == null){
-		//	System.out.println("No IP specified. Waiting for connections...\n");
-		
-		//this needs to be done when a user creates a game (the game owner is the one who creates the deck)
-		encDeck = createDeck(gameUser);
-		//}
-		/*
-		//test of commutative RSA (encrypting and decrypting in a different order)
-		RSAService tmprsaService = new RSAService(rsaService.getP(), rsaService.getQ());
-
-		System.out.println("Data after first encryption step: " + new String(encDeck.encCards[0].cardData) + "\n");
-
-		//encrypt the already encrypted card again with another rsaservice (different key)
-		EncryptedCard deCard =  tmprsaService.encryptEncCard(encDeck.encCards[0]);
-		System.out.println("Data after second encryption step: " + new String(deCard.cardData) + "\n");
-
-		//decrypt with the first rsaService
-		EncryptedCard ueCard = rsaService.decryptEncCard(deCard);
-		System.out.println("Data after decryption with first key (used in first encryption step): " + new String(ueCard.cardData) + "\n");
-
-		//then decrypt with the second
-		Card c = tmprsaService.decryptCard(ueCard);
-
-		//if this prints jiberish then something has gone wrong else all is sweet =)
-		System.out.println("Data after decryption with second key (used in second encryption step): " + String.valueOf(c.cardType) + " of " + c.suit);
-		*/
-		MiscHelper.clearConsole();
-
-		//Get player's username.
-
-
-		while (true)
-		{
-			//Menu choice becomes the integer chosen by the user.
-			int menuChoice = MenuOptions.printMainMenu();
-
-			if (menuChoice == 1)
-			{
-				com.startNewGame(MenuOptions.startNewGameMenu());
-			} else if (menuChoice == 2) {
-				com.joinGameOffMenu();
-			} else if (menuChoice == Integer.MIN_VALUE)
-			{
-				System.err.println("Sorry, I was unable to recognise what your input as a number. Try numbers, like 1,2,3 etc.");
-			}
-
-			//Testing startNewGame.
-			//com.startNewGame(5);
-		}
-
+		return;
 
 	}
 
+	
+	/**
+	 * Start game.
+	 *
+	 * @throws InvalidKeyException the invalid key exception
+	 * @throws BadPaddingException the bad padding exception
+	 * @throws IllegalBlockSizeException the illegal block size exception
+	 */
+	private void StartGame() throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException{
+		//Menu choice becomes the integer chosen by the user.
+		int menuChoice = MenuOptions.printMainMenu();
+		boolean isGameHost = false;
+		ArrayList<User> gameUsers = null;
+		EncryptedDeck encDeck = null;
+
+		if (menuChoice == MenuOptions.HOST_GAME)
+		{
+			isGameHost = true;
+			gameUsers = com.startNewGame(MenuOptions.startNewGameMenu());
+		} else if (menuChoice == MenuOptions.JOIN_GAME) {
+			gameUsers = com.joinGameOffMenu();
+		} else if (menuChoice == Integer.MIN_VALUE)
+		{
+			System.err.println("Sorry, I was unable to recognise what your input as a number. Try numbers, like 1,2,3 etc.");
+			StartGame();
+			return;
+		}
+		
+		if (gameUsers == null){
+			StartGame();
+			return;
+		}
+		
+		//once com.startNewGame or com.joinGameOffMenu have returned the game is ready...
+		if (isGameHost){
+			encDeck = createDeck(gameUser);
+			//broadcast p and q with com.broadcastPQ
+			//send the deck
+			//for each user in gameUsers call com.requestEncDeck(user, encDeck)
+			
+			//TODO: add more here later... the above will do for now
+			
+		} else {
+			//subscribe to PQ (com.waitPQ)
+			//subscribe to receive the encrypted deck (com.waitEncryptedDeck)
+			
+			//TODO: add more here later... the above will do for now
+		}
+		
+		return;
+	}
+	
+	
 	/**
 	 * Creates the deck.
 	 *
+	 * @param user the user
 	 * @return the encrypted deck
-	 * @throws BadPaddingException 
 	 * @throws InvalidKeyException the invalid key exception
+	 * @throws BadPaddingException the bad padding exception
 	 * @throws IllegalBlockSizeException the illegal block size exception
-	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	private EncryptedDeck createDeck(User user) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException{
 		Deck deck = new Deck(rsaService, user);
@@ -106,6 +113,25 @@ public class Poker {
 		return encDeck;
 	}
 
+	
+	/**
+	 * Sets the username.
+	 */
+	public void setUsername()
+	{
+		System.out.print("Enter your username: ");
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+
+		try {
+			gameUser = new User(br.readLine());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.err.println("UNABLE TO READ FROM COMMAND LINE");
+		}
+	}
+	
+	
 	/**
 	 * The main method.
 	 *
@@ -120,19 +146,5 @@ public class Poker {
 			e.printStackTrace();
 		}
 	}
-
-	public void setUsername()
-	{
-		System.out.print("Enter your username: ");
-		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-
-		try {
-			gameUser = new User(br.readLine());
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			System.err.println("UNABLE TO READ FROM COMMAND LINE");
-		}
-	}
-
+	
 }

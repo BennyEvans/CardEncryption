@@ -8,6 +8,9 @@ public class MenuOptions {
 	
 	private static String choiceString = "";
 	
+	public static final int HOST_GAME = 1;
+	public static final int JOIN_GAME = 2;
+	
 	public static int printMainMenu()
 	{
 		MiscHelper.clearConsole();
