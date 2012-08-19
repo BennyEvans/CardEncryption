@@ -82,7 +82,7 @@ public class ComService {
 		
 		//Subscribe to responses bearing my username. This will be useful after we actually advertise the game.
 		try {
-			gameSub = elvin.subscribe("request == 'newGame' && hostUUID == '"+user.getID()+"'");
+			gameSub = elvin.subscribe("request == 'newGameResponse' && hostUUID == '"+user.getID()+"'");
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -213,10 +213,6 @@ public class ComService {
 			public void notificationReceived(NotificationEvent event)
 			{
 				
-				//WHY IS THIS NULL AFTER JOINING A GAME???
-				//Because the notification being put in doesn't use the string "hostUsername".
-				System.out.println(event.notification.getString("hostUsername"));
-				System.out.println(event.notification.getString("hostUUID"));
 				User tmpUser = new User(event.notification.getString("hostUsername"), event.notification.getString("hostUUID"));
 				if (findGameHostByID(tmpUser.getID()) == null ) {
 					availableGames.add(tmpUser);
@@ -338,7 +334,7 @@ public class ComService {
 	    	joinGameNotificationToHost.set("hostUUID", gameHost.getID());
 	    	joinGameNotificationToHost.set("playerUsername", user.getUsername());
 	    	joinGameNotificationToHost.set("playerUUID", user.getID());
-	    	joinGameNotificationToHost.set("request", "newGame");
+	    	joinGameNotificationToHost.set("request", "newGameResponse");
 			try {
 				elvin.send(joinGameNotificationToHost);
 			} catch (IOException e) {
