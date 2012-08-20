@@ -51,7 +51,28 @@ public class ComService {
 	private User gameHost;
 	
 	/** The game has filled var. */
-	boolean gameHasFilled = false;
+	private boolean gameHasFilled = false;
+	
+	
+	
+	//COULD JUST HAVE AN ENUM HERE
+	
+	//join game
+	private final String JOIN_GAME = "newGameResponse";
+	
+	//broadcast a game
+	private final String NEW_GAME = "newGame";
+	
+	//broadcast p and q
+	private final String BROADCAST_PQ = "broadcastpq";
+	
+	//request a user to encrypt the deck
+	private final String REQUEST_ENC_DECK = "requestEncDeck";
+	
+	//reply from a request to encrypt the deck
+	private final String REPLY_ENC_DECK = "requestEncDeckReply";
+	
+	
 	
 	/** The notification handle. */
 	ScheduledFuture<?> notificationHandle;
@@ -130,7 +151,7 @@ public class ComService {
 		// we actually advertise the game.
 		try {
 			gameSub = elvin
-					.subscribe("request == 'newGameResponse' && hostUUID == '"
+					.subscribe("request == '" + JOIN_GAME +"' && hostUUID == '"
 							+ user.getID() + "'");
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
@@ -198,7 +219,7 @@ public class ComService {
 				Notification gameNotification = new Notification();
 				gameNotification.set("hostUUID", user.getID());
 				gameNotification.set("hostUsername", user.getUsername());
-				gameNotification.set("request", "newGame");
+				gameNotification.set("request", NEW_GAME);
 				try {
 					elvin.send(gameNotification);
 				} catch (IOException e) {
@@ -210,7 +231,7 @@ public class ComService {
 		};
 
 		notificationHandle = scheduler.scheduleAtFixedRate(
-				notifyPotentialJoiners, 1000, 3000, TimeUnit.MILLISECONDS);
+				notifyPotentialJoiners, 498, 498, TimeUnit.MILLISECONDS);
 
 		try {
 			scheduler.awaitTermination(6, TimeUnit.MINUTES);
@@ -243,7 +264,7 @@ public class ComService {
 
 		// Subscribe to new game advertisement notifications
 		try {
-			gameAdvertisementSub = elvin.subscribe("request == 'newGame'");
+			gameAdvertisementSub = elvin.subscribe("request == '" + NEW_GAME + "'");
 		} catch (InvalidSubscriptionException e) {
 
 			e.printStackTrace();
@@ -326,7 +347,7 @@ public class ComService {
 		};
 
 		notificationHandle = scheduler.scheduleAtFixedRate(
-				checkForAvailableGames, 300, 3000, TimeUnit.MILLISECONDS);
+				checkForAvailableGames, 1000, 3000, TimeUnit.MILLISECONDS);
 
 		// Grab the username of the hoster
 		try {
@@ -395,7 +416,7 @@ public class ComService {
 			joinGameNotificationToHost
 					.set("playerUsername", user.getUsername());
 			joinGameNotificationToHost.set("playerUUID", user.getID());
-			joinGameNotificationToHost.set("request", "newGameResponse");
+			joinGameNotificationToHost.set("request", JOIN_GAME);
 			try {
 				elvin.send(joinGameNotificationToHost);
 			} catch (IOException e) {
