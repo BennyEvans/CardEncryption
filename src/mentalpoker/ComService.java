@@ -41,27 +41,26 @@ public class ComService {
 	/** The current game members. */
 	private ArrayList<User> currentGameMembers = new ArrayList<User>();
 	
-	/** There has been an error var. */
-	private boolean thereHasBeenAnError = false;
-	
 	/** The available games. */
 	private ArrayList<User> availableGames = new ArrayList<User>();
 	
 	/** The game host. */
 	private User gameHost;
-	
-	/** The game has filled var. */
-	private boolean gameHasFilled = false;
-	
-	
-	
+
 	//COULD JUST HAVE AN ENUM HERE
+	
+	private final String NOT_TYPE = "TYPE";
+	private final String GAME_ID = "GAMEID";
 	
 	//join game
 	private final String JOIN_GAME = "newGameResponse";
 	
 	//broadcast a game
 	private final String NEW_GAME = "newGame";
+	
+	private final String GAME_FULL = "gameFull";
+	
+	private final String START_GAME = "startGame";
 	
 	//broadcast p and q
 	private final String BROADCAST_PQ = "broadcastpq";
@@ -72,21 +71,12 @@ public class ComService {
 	//reply from a request to encrypt the deck
 	private final String REPLY_ENC_DECK = "requestEncDeckReply";
 	
-	
-	
 	/** The notification handle. */
 	ScheduledFuture<?> notificationHandle;
 
 	/** The scheduler. */
 	private final ScheduledExecutorService scheduler = Executors
 			.newScheduledThreadPool(1);
-	
-
-	// TODO: If the StartGame and joinGameOffMenu functions don't already block,
-	// we need to make them block
-	// TODO: Make the StartGame and joinGameOffMenu functions return the list of game Members
-	// TODO: Clean up after a game has been created (all slots filled) ie.
-	// remove all subscriptions, stop schedulers, clear arrays etc.
 
 	
 	/**
@@ -131,9 +121,38 @@ public class ComService {
 	 *
 	 * @param numberOfSlots the number of slots
 	 * @return the list of users in the game
+	 * @throws InterruptedException 
+	 * @throws IOException 
+	 * @throws InvalidSubscriptionException 
 	 */
-	public ArrayList<User> startNewGame(final int numberOfSlots) {
-		gameHasFilled = false;
+	public ArrayList<User> startNewGame(final int numberOfSlots) throws InterruptedException, InvalidSubscriptionException, IOException {
+		
+		//notify potential players that there is a game
+		final Runnable notifyPotentialJoiners = new Runnable() {
+			public void run() {
+				if (currentGameMembers.size() >= numberOfSlots) {
+					notificationHandle.cancel(true);
+				} else {
+					try {
+						sendGameNotification();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+
+			private void sendGameNotification() throws IOException {
+				Notification gameNotification = new Notification();
+				gameNotification.set(GAME_ID, user.getID());
+				gameNotification.set("hostUsername", user.getUsername());
+				gameNotification.set(NOT_TYPE, NEW_GAME);
+				
+				elvin.send(gameNotification);
+
+			}
+		};
+		
+		
 		if (user.getUsername() == null) {
 			System.err.println("You cannot have an empty username.");
 			return null;
@@ -144,26 +163,14 @@ public class ComService {
 			return null;
 		}
 
-		// Reset the error boolean variable.
-		thereHasBeenAnError = false;
-
-		// Subscribe to responses bearing my username. This will be useful after
-		// we actually advertise the game.
-		try {
-			gameSub = elvin
-					.subscribe("request == '" + JOIN_GAME +"' && hostUUID == '"
+		// Subscribe to responses bearing my username. This will be useful after we actually advertise the game.
+		gameSub = elvin.subscribe(NOT_TYPE + " == '" + JOIN_GAME +"' && " + GAME_ID + " == '"
 							+ user.getID() + "'");
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			thereHasBeenAnError = true;
-		}
+
 
 		System.out.println("Now hosting game...");
 
-		/**
-		 * Receive requests to join the game.
-		 */
+		//Receive requests to join the game.
 		gameSub.addListener(new NotificationListener() {
 			// This is called if we have a response requesting to join our game.
 			public void notificationReceived(NotificationEvent event) {
@@ -175,80 +182,68 @@ public class ComService {
 							.getString("playerUsername"), event.notification
 							.getString("playerUUID"));
 					currentGameMembers.add(tmpUser);
-					String numberOfSlotsLeft = Integer.toString(numberOfSlots
-							- currentGameMembers.size());
-					System.out.println(event.notification
-							.getString("playerUsername")
-							+ " connected... "
-							+ numberOfSlotsLeft + " slots left.");
+					String numberOfSlotsLeft = Integer.toString(numberOfSlots - currentGameMembers.size());
+					System.out.println(event.notification.getString("playerUsername")
+							+ " connected... " + numberOfSlotsLeft + " slots left.");
+					
+					if (currentGameMembers.size() == numberOfSlots){
+						//send start game notification
+						Notification not = new Notification();
+						not.set(NOT_TYPE, START_GAME);
+						not.set(GAME_ID, user.getID());
+						try {
+							elvin.send(not);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+
+						synchronized (gameSub) {
+							gameSub.notify();
+						}
+					}
+					
 				} else {
-					System.out
-							.println("DEBUG: Attempt to join, but either did not match username or is full.");
+					
+					System.out.println("User attempted to join, but game is full.");
 					Notification gameFullNotification = new Notification();
-					gameFullNotification.set("requesterUsername",
-							user.getUsername());
-					gameFullNotification.set("gameStatus", "full");
+					gameFullNotification.set("requesterUsername", user.getUsername());
+					gameFullNotification.set(NOT_TYPE, GAME_FULL);
+
 					try {
 						elvin.send(gameFullNotification);
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
-						thereHasBeenAnError = true;
 					}
 				}
 			}
 		});
 
-		/**
-		 * At 1500ms intervals, notify potential players that there is a game
-		 * available.
-		 */
-
-		// New timer code.
-		final Runnable notifyPotentialJoiners = new Runnable() {
-			public void run() {
-				if (currentGameMembers.size() >= numberOfSlots) {
-					notificationHandle.cancel(true);
-					gameHasFilled = true;
-				} else {
-					sendGameNotification();
-				}
-			}
-
-			private void sendGameNotification() {
-				Notification gameNotification = new Notification();
-				gameNotification.set("hostUUID", user.getID());
-				gameNotification.set("hostUsername", user.getUsername());
-				gameNotification.set("request", NEW_GAME);
-				try {
-					elvin.send(gameNotification);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					thereHasBeenAnError = true;
-				}
-			}
-		};
 
 		notificationHandle = scheduler.scheduleAtFixedRate(
 				notifyPotentialJoiners, 498, 498, TimeUnit.MILLISECONDS);
-
-		try {
-			scheduler.awaitTermination(6, TimeUnit.MINUTES);
-		} catch (InterruptedException e) {
-			thereHasBeenAnError = true;
-			e.printStackTrace();
+		
+		synchronized (gameSub) {
+			//wait until game is full
+			gameSub.wait();
 		}
+		
+		//cleanup
+		notificationHandle.cancel(true);
+		gameSub.remove();
+		scheduler.shutdown();
+		
+		//sleep for 500ms...
+		//I'm not sure this is necessary but its just a precaution... is Elvin FIFO?
+		//It's here to prevent the next command (send pq) being out of order and received
+		//before the START_GAME notification.
+		Thread.sleep(500);
+		
+		System.out.println("Starting Game!");
 
-		if (!thereHasBeenAnError) {
-			return null;
-		} else {
-			thereHasBeenAnError = false;
-			// return the members in the game
-			ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
-			currentGameMembers = null;
-			return tmp;
-		}
+		ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
+		currentGameMembers = null;
+		return tmp;
+
 	}
 
 	
@@ -256,76 +251,16 @@ public class ComService {
 	 * Join game off menu.
 	 *
 	 * @return the list of users in the game
+	 * @throws InterruptedException 
+	 * @throws IOException 
+	 * @throws InvalidSubscriptionException 
 	 */
-	public ArrayList<User> joinGameOffMenu() {
-		thereHasBeenAnError = false;
-		System.out.println("Searching for available games...");
-		availableGames.clear();
-
-		// Subscribe to new game advertisement notifications
-		try {
-			gameAdvertisementSub = elvin.subscribe("request == '" + NEW_GAME + "'");
-		} catch (InvalidSubscriptionException e) {
-
-			e.printStackTrace();
-			thereHasBeenAnError = true;
-		} catch (IOException e) {
-
-			e.printStackTrace();
-			thereHasBeenAnError = true;
-		}
-
-		// Subscribe to game full notifications.
-		try {
-			gameFullSub = elvin.subscribe("gameStatus == 'full'");
-		} catch (InvalidSubscriptionException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			thereHasBeenAnError = true;
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			thereHasBeenAnError = true;
-		}
-
-		// Whenever a game notification is received, add it to the availableGames hashSet
+	public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSubscriptionException, IOException {
 		
-		gameAdvertisementSub.addListener(new NotificationListener() {
-			// This is called if we have a response requesting to join our game.
-			public void notificationReceived(NotificationEvent event) {
-
-				User tmpUser = new User(event.notification
-						.getString("hostUsername"), event.notification
-						.getString("hostUUID"));
-				if (findGameHostByID(tmpUser.getID()) == null) {
-					availableGames.add(tmpUser);
-				}
-			}
-
-		});
-
-		/**
-		 * If a game is reported as full, remove it from the available games
-		 * list.
-		 */
-		gameFullSub.addListener(new NotificationListener() {
-			public void notificationReceived(NotificationEvent event) {
-				// may need to change this
-				User tmpUser = new User(event.notification
-						.getString("hostUsername"), event.notification
-						.getString("hostUUID"));
-				availableGames.remove(tmpUser);
-			}
-
-		});
-
-		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-
 		/**
 		 * We want to repeatedly clear the screen, and print out the available
 		 * games and a prompt asking which username to connect to.
 		 */
-
 		final Runnable checkForAvailableGames = new Runnable() {
 			public void run() {
 				MiscHelper.clearConsole();
@@ -337,8 +272,7 @@ public class ComService {
 				Iterator<User> itr = availableGames.iterator();
 				int i = 0;
 				while (itr.hasNext()) {
-					System.out.println(String.valueOf(i) + " "
-							+ itr.next().getUsername());
+					System.out.println(String.valueOf(i) + " " + itr.next().getUsername());
 					i++;
 				}
 				System.out.print("Choose a game (enter the number): ");
@@ -346,87 +280,141 @@ public class ComService {
 			}
 		};
 
+		System.out.println("Searching for available games...");
+		availableGames.clear();
+
+		// Subscribe to new game advertisement notifications
+		gameAdvertisementSub = elvin.subscribe(NOT_TYPE + " == '" + NEW_GAME + "'");
+
+		// Subscribe to game full notifications.
+		gameFullSub = elvin.subscribe(NOT_TYPE + " == '" + GAME_FULL + "'");
+
+		// Whenever a game notification is received, add it to the availableGames list if not in there already
+		gameAdvertisementSub.addListener(new NotificationListener() {
+			// This is called if we have a response requesting to join our game.
+			public void notificationReceived(NotificationEvent event) {
+
+				User tmpUser = new User(event.notification
+						.getString("hostUsername"), event.notification
+						.getString(GAME_ID));
+				if (findGameHostByID(tmpUser.getID()) == null) {
+					availableGames.add(tmpUser);
+				}
+			}
+
+		});
+		
+
+		// If a game is reported as full, remove it from the available games list.
+		gameFullSub.addListener(new NotificationListener() {
+			public void notificationReceived(NotificationEvent event) {
+				// may need to change this
+				User tmpUser = findGameHostByID(event.notification.getString(GAME_ID));
+				if (tmpUser != null){
+					availableGames.remove(tmpUser);
+				}
+			}
+
+		});
+
+		
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+
 		notificationHandle = scheduler.scheduleAtFixedRate(
 				checkForAvailableGames, 1000, 3000, TimeUnit.MILLISECONDS);
 
-		// Grab the username of the hoster
+		
+		// Grab the hoster
 		try {
-
 			gameHost = availableGames.get(Integer.parseInt(br.readLine()));
-			if (gameHost == null) {
-				System.out.println("returned NULL!");
-			}
-			notificationHandle.cancel(true);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			// unable to read from command line
-			return null;
 		} catch (NumberFormatException e) {
 			System.err.println("Your input was not a number!");
+			currentGameMembers = null;
+			scheduler.shutdown();
+			notificationHandle.cancel(true);
+			gameFullSub.remove();
+			gameAdvertisementSub.remove();
 			return null;
 		}
 
+		//cleanup
+		scheduler.shutdown();
+		notificationHandle.cancel(true);
+		gameFullSub.remove();
+		gameAdvertisementSub.remove();
 
 		// At this point, we wish to notify the host that we wish to join their game.
-
-
-		joinGame();
-
-		// Or cancel with a timeout of 6 minutes if it goes on too long.
-		try {
-			scheduler.awaitTermination(6, TimeUnit.MINUTES);
-		} catch (InterruptedException e) {
-			thereHasBeenAnError = true;
-			e.printStackTrace();
-		}
-
-		if (!thereHasBeenAnError) {
-
-			ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
+		if (joinGame()){
+			System.err.println("Error Joining Game.");
 			currentGameMembers = null;
-			return tmp;
-
-		} else {
-			thereHasBeenAnError = false;
-			// error
 			return null;
 		}
+		
+		System.out.println("Joined Game!");
+
+		ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
+		currentGameMembers = null;
+		return tmp;
+
 	}
 
 	
 	/**
 	 * Join game.
+	 * @throws IOException 
+	 * @throws InterruptedException 
 	 */
-	public void joinGame() {
+	public boolean joinGame() throws IOException, InterruptedException {
 
 		if (gameHost.getUsername() == null) {
 			System.out.println("Not able to get the game host's username.");
+			return true;
 		} else if (gameHost.getID() == null) {
 			System.out.println("Not able to get the game host's id.");
+			return true;
 		} else if (user.getUsername() == null) {
 			System.out.println("Not able to get the user's username.");
+			return true;
 		} else if (user.getID() == null) {
 			System.out.println("Not able to get your ID.");
+			return true;
 		} else {
+			
 			Notification joinGameNotificationToHost = new Notification();
-			joinGameNotificationToHost.set("hostUsername",
-					gameHost.getUsername());
-			joinGameNotificationToHost.set("hostUUID", gameHost.getID());
-			joinGameNotificationToHost
-					.set("playerUsername", user.getUsername());
-			joinGameNotificationToHost.set("playerUUID", user.getID());
-			joinGameNotificationToHost.set("request", JOIN_GAME);
-			try {
-				elvin.send(joinGameNotificationToHost);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				thereHasBeenAnError = true;
-			}
-		}
+			
+			//subscribe to start game notification
+			final Subscription startSub = elvin.subscribe(NOT_TYPE + " == '" + START_GAME +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
 
-		// TODO: Expand this to stay within this method until game has been set up.
+			startSub.addListener(new NotificationListener() {
+				public void notificationReceived(NotificationEvent e) {
+
+						//notify the waiting thread that a message has arrived
+						synchronized (startSub) {
+							startSub.notify();
+						}
+
+	
+
+				}
+			});
+			
+			//construct the notification to send
+			joinGameNotificationToHost.set("hostUsername", gameHost.getUsername());
+			joinGameNotificationToHost.set(GAME_ID, gameHost.getID());
+			joinGameNotificationToHost.set("playerUsername", user.getUsername());
+			joinGameNotificationToHost.set("playerUUID", user.getID());
+			joinGameNotificationToHost.set(NOT_TYPE, JOIN_GAME);
+
+			synchronized (startSub) {
+				//send notification
+				elvin.send(joinGameNotificationToHost);
+
+				//wait until received reply
+				startSub.wait();
+			}
+
+			return false;
+		}
 
 	}
 

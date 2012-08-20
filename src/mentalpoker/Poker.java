@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 
+import org.avis.client.InvalidSubscriptionException;
+
 /**
  * The Class Poker.
  */
@@ -49,8 +51,11 @@ public class Poker {
 	 * @throws InvalidKeyException the invalid key exception
 	 * @throws BadPaddingException the bad padding exception
 	 * @throws IllegalBlockSizeException the illegal block size exception
+	 * @throws IOException 
+	 * @throws InterruptedException 
+	 * @throws InvalidSubscriptionException 
 	 */
-	private void StartGame() throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException{
+	private void StartGame() throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidSubscriptionException, InterruptedException, IOException{
 		//Menu choice becomes the integer chosen by the user.
 		int menuChoice = MenuOptions.printMainMenu();
 		boolean isGameHost = false;
