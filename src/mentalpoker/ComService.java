@@ -1,8 +1,14 @@
 package mentalpoker;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.Executors;
@@ -23,20 +29,14 @@ public class ComService {
 	/** The user current. */
 	private User user;
 	
+	/** The game host. */
+	private User gameHost;
+	
 	/** The elvin service. */
 	private static Elvin elvin;
 	
-	/** The elvin server. */
-	private String server;
-	
 	/** The game subscription. */
 	private Subscription gameSub;
-	
-	/** The game advertisement subscription. */
-	private Subscription gameAdvertisementSub;
-	
-	/** The game full subscription. */
-	private Subscription gameFullSub;
 	
 	/** The current game members. */
 	private ArrayList<User> currentGameMembers = new ArrayList<User>();
@@ -44,31 +44,16 @@ public class ComService {
 	/** The available games. */
 	private ArrayList<User> availableGames = new ArrayList<User>();
 	
-	/** The game host. */
-	private User gameHost;
-
-	//COULD JUST HAVE AN ENUM HERE
 	
 	private final String NOT_TYPE = "TYPE";
 	private final String GAME_ID = "GAMEID";
-	
-	//join game
 	private final String JOIN_GAME = "newGameResponse";
-	
-	//broadcast a game
 	private final String NEW_GAME = "newGame";
-	
 	private final String GAME_FULL = "gameFull";
-	
+	private final String GAME_USERS = "gameUsers";
 	private final String START_GAME = "startGame";
-	
-	//broadcast p and q
 	private final String BROADCAST_PQ = "broadcastpq";
-	
-	//request a user to encrypt the deck
 	private final String REQUEST_ENC_DECK = "requestEncDeck";
-	
-	//reply from a request to encrypt the deck
 	private final String REPLY_ENC_DECK = "requestEncDeckReply";
 	
 	/** The notification handle. */
@@ -77,7 +62,7 @@ public class ComService {
 	/** The scheduler. */
 	private final ScheduledExecutorService scheduler = Executors
 			.newScheduledThreadPool(1);
-
+	
 	
 	/**
 	 * Find game host by id.
@@ -93,6 +78,23 @@ public class ComService {
 		}
 		return null;
 	}
+	
+
+	/**
+	 * Find user by id.
+	 *
+	 * @param userID the users ID
+	 * @return the user
+	 */
+	private User findUserByID(String userID) {
+		for (int i = 0; i < currentGameMembers.size(); i++) {
+			if (currentGameMembers.get(i).getID().equals(userID)) {
+				return currentGameMembers.get(i);
+			}
+		}
+		return null;
+	}
+	
 
 	
 	/**
@@ -104,14 +106,18 @@ public class ComService {
 	 * @throws IllegalArgumentException the illegal argument exception
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-	public ComService(User user) throws ConnectException, InvalidURIException,
+	public ComService(User user, String server) throws ConnectException, InvalidURIException,
 			IllegalArgumentException, IOException {
 		this.user = user;
-		this.server = "elvin://elvin.students.itee.uq.edu.au";
 		notificationHandle = null;
 
 		elvin = new Elvin(server);
 		elvin.closeOnExit();
+	}
+	
+	
+	public void shutdown(){
+		elvin.close();
 	}
 
 	
@@ -126,6 +132,8 @@ public class ComService {
 	 * @throws InvalidSubscriptionException 
 	 */
 	public ArrayList<User> startNewGame(final int numberOfSlots) throws InterruptedException, InvalidSubscriptionException, IOException {
+		
+		gameHost = user;
 		
 		//notify potential players that there is a game
 		final Runnable notifyPotentialJoiners = new Runnable() {
@@ -143,8 +151,8 @@ public class ComService {
 
 			private void sendGameNotification() throws IOException {
 				Notification gameNotification = new Notification();
-				gameNotification.set(GAME_ID, user.getID());
-				gameNotification.set("hostUsername", user.getUsername());
+				gameNotification.set(GAME_ID, gameHost.getID());
+				gameNotification.set("hostUsername", gameHost.getUsername());
 				gameNotification.set(NOT_TYPE, NEW_GAME);
 				
 				elvin.send(gameNotification);
@@ -165,7 +173,7 @@ public class ComService {
 
 		// Subscribe to responses bearing my username. This will be useful after we actually advertise the game.
 		gameSub = elvin.subscribe(NOT_TYPE + " == '" + JOIN_GAME +"' && " + GAME_ID + " == '"
-							+ user.getID() + "'");
+							+ gameHost.getID() + "'");
 
 
 		System.out.println("Now hosting game...");
@@ -189,11 +197,36 @@ public class ComService {
 					if (currentGameMembers.size() == numberOfSlots){
 						//send start game notification
 						Notification not = new Notification();
+						UserList ul = new UserList();
+						
+						currentGameMembers.add(user);
+						ul.users = new ArrayList<User>(currentGameMembers);
+						ByteArrayOutputStream bos = new ByteArrayOutputStream();
+						ObjectOutput out = null;
+						try {
+							out = new ObjectOutputStream(bos);
+							out.writeObject(ul);
+						} catch (IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}   
+						
+						byte[] tmpBytes = bos.toByteArray();
+						
 						not.set(NOT_TYPE, START_GAME);
-						not.set(GAME_ID, user.getID());
+						not.set(GAME_ID, gameHost.getID());
+						not.set(GAME_USERS, tmpBytes);
 						try {
 							elvin.send(not);
 						} catch (IOException e) {
+							e.printStackTrace();
+						}
+						
+						try {
+							out.close();
+							bos.close();
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
 
@@ -206,8 +239,8 @@ public class ComService {
 					
 					System.out.println("User attempted to join, but game is full.");
 					Notification gameFullNotification = new Notification();
-					gameFullNotification.set("requesterUsername", user.getUsername());
 					gameFullNotification.set(NOT_TYPE, GAME_FULL);
+					gameFullNotification.set(GAME_ID, gameHost.getID());				
 
 					try {
 						elvin.send(gameFullNotification);
@@ -232,16 +265,25 @@ public class ComService {
 		gameSub.remove();
 		scheduler.shutdown();
 		
-		//sleep for 500ms...
+		//sleep for 250ms...
 		//I'm not sure this is necessary but its just a precaution... is Elvin FIFO?
 		//It's here to prevent the next command (send pq) being out of order and received
 		//before the START_GAME notification.
-		Thread.sleep(500);
+		Thread.sleep(250);
+		
+		//send game full to other users not in the game
+		Notification gameFullNotification = new Notification();
+		gameFullNotification.set(NOT_TYPE, GAME_FULL);
+		gameFullNotification.set(GAME_ID, gameHost.getID());				
+		elvin.send(gameFullNotification);
+		
+		Thread.sleep(250);
 		
 		System.out.println("Starting Game!");
 
 		ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
 		currentGameMembers = null;
+		availableGames = null;
 		return tmp;
 
 	}
@@ -257,6 +299,8 @@ public class ComService {
 	 */
 	public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSubscriptionException, IOException {
 		
+		Subscription gameFullSub;
+		Subscription gameAdvertisementSub;
 		/**
 		 * We want to repeatedly clear the screen, and print out the available
 		 * games and a prompt asking which username to connect to.
@@ -330,6 +374,7 @@ public class ComService {
 		} catch (NumberFormatException e) {
 			System.err.println("Your input was not a number!");
 			currentGameMembers = null;
+			availableGames = null;
 			scheduler.shutdown();
 			notificationHandle.cancel(true);
 			gameFullSub.remove();
@@ -347,6 +392,7 @@ public class ComService {
 		if (joinGame()){
 			System.err.println("Error Joining Game.");
 			currentGameMembers = null;
+			availableGames = null;
 			return null;
 		}
 		
@@ -354,6 +400,7 @@ public class ComService {
 
 		ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
 		currentGameMembers = null;
+		availableGames = null;
 		return tmp;
 
 	}
@@ -387,6 +434,31 @@ public class ComService {
 
 			startSub.addListener(new NotificationListener() {
 				public void notificationReceived(NotificationEvent e) {
+					
+						byte[] tmpBytes = (byte[]) e.notification.get(GAME_USERS);
+						
+						ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
+						ObjectInput in;
+						UserList ul = null;
+						try {
+							in = new ObjectInputStream(bis);
+							ul = (UserList) in.readObject(); 
+							bis.close();
+							in.close();
+						} catch (Exception e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+						
+						if (ul == null){
+							currentGameMembers = null;
+						} else {
+							currentGameMembers = ul.users;
+							if (findUserByID(user.getID()) == null){
+								//wasn't in the game list... maybe we missed out =(
+								currentGameMembers = null;
+							}
+						}
 
 						//notify the waiting thread that a message has arrived
 						synchronized (startSub) {
@@ -413,6 +485,11 @@ public class ComService {
 				startSub.wait();
 			}
 
+			startSub.remove();
+			if (currentGameMembers == null){
+				//wasn't in the game list
+				return true;
+			}
 			return false;
 		}
 
@@ -424,9 +501,18 @@ public class ComService {
 	 *
 	 * @param p the p
 	 * @param q the q
+	 * @throws InterruptedException 
 	 */
-	public void broadcastPQ(BigInteger p, BigInteger q) {
+	public void broadcastPQ(BigInteger p, BigInteger q) throws InterruptedException {
 		// TODO: create a notification to broadcast p and q to all players.
+		Notification pqnot = new Notification();
+		pqnot.set(GAME_ID, gameHost.getID());
+		pqnot.set(NOT_TYPE, BROADCAST_PQ);
+		//need to send them as Strings because they arent serializable
+		pqnot.set("p", p.toString());
+		pqnot.set("q", q.toString());
+		//short sleep before returning
+		Thread.sleep(250);
 		return;
 	}
 

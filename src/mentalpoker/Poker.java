@@ -4,10 +4,14 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 import org.avis.client.InvalidSubscriptionException;
 
@@ -15,9 +19,6 @@ import org.avis.client.InvalidSubscriptionException;
  * The Class Poker.
  */
 public class Poker {
-
-	/** The rsa service. */
-	RSAService rsaService;
 	
 	/** The com. */
 	ComService com;
@@ -34,12 +35,8 @@ public class Poker {
 	public Poker() throws Exception {
 		
 		setUsername();
-
-		rsaService = new RSAService();
-		com = new ComService(gameUser);
-
+		com = new ComService(gameUser, "elvin://elvin.students.itee.uq.edu.au");
 		StartGame();
-		
 		return;
 
 	}
@@ -54,13 +51,18 @@ public class Poker {
 	 * @throws IOException 
 	 * @throws InterruptedException 
 	 * @throws InvalidSubscriptionException 
+	 * @throws NoSuchProviderException 
+	 * @throws NoSuchPaddingException 
+	 * @throws NoSuchAlgorithmException 
+	 * @throws InvalidKeySpecException 
 	 */
-	private void StartGame() throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidSubscriptionException, InterruptedException, IOException{
+	private void StartGame() throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidSubscriptionException, InterruptedException, IOException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
 		//Menu choice becomes the integer chosen by the user.
 		int menuChoice = MenuOptions.printMainMenu();
 		boolean isGameHost = false;
 		ArrayList<User> gameUsers = null;
 		EncryptedDeck encDeck = null;
+		RSAService rsaService;
 
 		if (menuChoice == MenuOptions.HOST_GAME)
 		{
@@ -76,14 +78,24 @@ public class Poker {
 		}
 		
 		if (gameUsers == null){
-			StartGame();
+			//could call startGame() here but exit is good enough for now
+			com.shutdown();
+			System.exit(1);
 			return;
+		}
+		
+		System.out.println("\nGame Players:");
+		for (int i = 0; i < gameUsers.size(); i++){
+			System.out.println(gameUsers.get(i).getUsername() + " " + gameUsers.get(i).getID());
 		}
 		
 		//once com.startNewGame or com.joinGameOffMenu have returned the game is ready...
 		if (isGameHost){
-			encDeck = createDeck(gameUser);
-			//broadcast p and q with com.broadcastPQ
+			rsaService = new RSAService();
+			//broadcast p and q
+			com.broadcastPQ(rsaService.getP(), rsaService.getQ());
+			//create and encrypt the deck
+			encDeck = createDeck(gameUser, rsaService);
 			//send the deck
 			//for each user in gameUsers call com.requestEncDeck(user, encDeck)
 			
@@ -109,8 +121,8 @@ public class Poker {
 	 * @throws BadPaddingException the bad padding exception
 	 * @throws IllegalBlockSizeException the illegal block size exception
 	 */
-	private EncryptedDeck createDeck(User user) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException{
-		Deck deck = new Deck(rsaService, user);
+	private EncryptedDeck createDeck(User user, RSAService rsaServ) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException{
+		Deck deck = new Deck(rsaServ, user);
 		EncryptedDeck encDeck = new EncryptedDeck();
 		for (int i = 0; i < Deck.NUM_CARDS; i++){
 			encDeck.encCards[i] = deck.getEncryptedCard(i);

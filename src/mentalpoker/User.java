@@ -1,12 +1,11 @@
 package mentalpoker;
 
-import java.io.Serializable;
 import java.util.UUID;
 
 /**
  * The Class User.
  */
-public class User implements Serializable{
+public class User implements java.io.Serializable{
 	
 	private static final long serialVersionUID = -4529431771734590529L;
 	private String name;
