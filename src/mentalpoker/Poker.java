@@ -3,11 +3,13 @@ package mentalpoker;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.math.BigInteger;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -69,6 +71,7 @@ public class Poker {
 			isGameHost = true;
 			gameUsers = com.startNewGame(MenuOptions.startNewGameMenu());
 		} else if (menuChoice == MenuOptions.JOIN_GAME) {
+			isGameHost = false;
 			gameUsers = com.joinGameOffMenu();
 		} else if (menuChoice == Integer.MIN_VALUE)
 		{
@@ -94,15 +97,28 @@ public class Poker {
 			rsaService = new RSAService();
 			//broadcast p and q
 			com.broadcastPQ(rsaService.getP(), rsaService.getQ());
+			System.out.println(rsaService.getP().toString() + "\n" + rsaService.getQ().toString());
 			//create and encrypt the deck
 			encDeck = createDeck(gameUser, rsaService);
-			//send the deck
-			//for each user in gameUsers call com.requestEncDeck(user, encDeck)
 			
+			//NEED TO CREATE A COPY OF encDeck for validation?
+			
+			//for each user in gameUsers request to encrypt the deck
+			for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
+				encDeck = com.requestEncDeck(usr.next(), encDeck);
+			}
+
 			//TODO: add more here later... the above will do for now
 			
 		} else {
-			//subscribe to PQ (com.waitPQ)
+			//get p and q
+			BigInteger tmp[] = com.waitPQ();
+			BigInteger p = tmp[0];
+			BigInteger q = tmp[1];
+			System.out.println(p.toString() + "\n" + q.toString());
+			
+			//create rsaservice with given p and q
+			rsaService = new RSAService(p, q);
 			//subscribe to receive the encrypted deck (com.waitEncryptedDeck)
 			
 			//TODO: add more here later... the above will do for now

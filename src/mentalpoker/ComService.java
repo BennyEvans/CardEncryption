@@ -21,6 +21,8 @@ import java.net.ConnectException;
 import org.avis.client.*;
 import org.avis.common.InvalidURIException;
 
+
+
 /**
  * The Class ComService.
  */
@@ -44,6 +46,7 @@ public class ComService {
 	/** The available games. */
 	private ArrayList<User> availableGames = new ArrayList<User>();
 	
+	private BigInteger pq[] = null;
 	
 	private final String NOT_TYPE = "TYPE";
 	private final String GAME_ID = "GAMEID";
@@ -269,7 +272,7 @@ public class ComService {
 		//I'm not sure this is necessary but its just a precaution... is Elvin FIFO?
 		//It's here to prevent the next command (send pq) being out of order and received
 		//before the START_GAME notification.
-		Thread.sleep(250);
+		Thread.sleep(100);
 		
 		//send game full to other users not in the game
 		Notification gameFullNotification = new Notification();
@@ -277,7 +280,7 @@ public class ComService {
 		gameFullNotification.set(GAME_ID, gameHost.getID());				
 		elvin.send(gameFullNotification);
 		
-		Thread.sleep(250);
+		Thread.sleep(100);
 		
 		System.out.println("Starting Game!");
 
@@ -502,17 +505,18 @@ public class ComService {
 	 * @param p the p
 	 * @param q the q
 	 * @throws InterruptedException 
+	 * @throws IOException 
 	 */
-	public void broadcastPQ(BigInteger p, BigInteger q) throws InterruptedException {
-		// TODO: create a notification to broadcast p and q to all players.
+	public void broadcastPQ(BigInteger p, BigInteger q) throws InterruptedException, IOException {
+
 		Notification pqnot = new Notification();
 		pqnot.set(GAME_ID, gameHost.getID());
 		pqnot.set(NOT_TYPE, BROADCAST_PQ);
-		//need to send them as Strings because they arent serializable
 		pqnot.set("p", p.toString());
 		pqnot.set("q", q.toString());
+		elvin.send(pqnot);
 		//short sleep before returning
-		Thread.sleep(250);
+		Thread.sleep(100);
 		return;
 	}
 
@@ -521,10 +525,34 @@ public class ComService {
 	 * Wait for p and q.
 	 *
 	 * @return p and q
+	 * @throws InterruptedException 
+	 * @throws IOException 
+	 * @throws InvalidSubscriptionException 
 	 */
-	public BigInteger[] waitPQ() {
-		// TODO: subscribe to PQ notifications and return when received.
-		return null;
+	public BigInteger[] waitPQ() throws InterruptedException, InvalidSubscriptionException, IOException {
+
+		final Subscription pqSub = elvin.subscribe(NOT_TYPE + " == '" + BROADCAST_PQ +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
+
+		pqSub.addListener(new NotificationListener() {
+			public void notificationReceived(NotificationEvent e) {
+				
+					pq = new BigInteger[2];
+					pq[0] = new BigInteger(e.notification.getString("p"));
+					pq[1] = new BigInteger(e.notification.getString("q"));
+					
+					//notify the waiting thread that a message has arrived
+					synchronized (pqSub) {
+						pqSub.notify();
+					}
+			}
+		});
+
+		synchronized (pqSub) {
+			//wait until received reply
+			pqSub.wait();
+		}
+		
+		return pq;
 	}
 
 	
