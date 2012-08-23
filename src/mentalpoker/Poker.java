@@ -105,7 +105,10 @@ public class Poker {
 			
 			//for each user in gameUsers request to encrypt the deck
 			for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
-				encDeck = com.requestEncDeck(usr.next(), encDeck);
+				User tmpUser = usr.next();
+				if (!tmpUser.getID().equals(gameUser.getID())){
+					encDeck = com.requestEncDeck(tmpUser, encDeck);
+				}
 			}
 
 			//TODO: add more here later... the above will do for now
@@ -143,6 +146,7 @@ public class Poker {
 		for (int i = 0; i < Deck.NUM_CARDS; i++){
 			encDeck.encCards[i] = deck.getEncryptedCard(i);
 		}
+		encDeck.usersEncrypted.add(user);
 		return encDeck;
 	}
 
