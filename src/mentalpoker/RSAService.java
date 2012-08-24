@@ -33,7 +33,7 @@ public class RSAService {
 	private BigInteger q;
 	private BigInteger n;
 	private BigInteger on;
-	private BigInteger e;
+	private BigInteger e = null;
 	private BigInteger d;
 	
 	
@@ -78,6 +78,19 @@ public class RSAService {
 		BigInteger pSub = p.subtract(BigInteger.ONE);
 		on = pSub.multiply(qSub);
 		genKeys();
+	    return;
+	}
+	
+	
+	public RSAService(BigInteger gp, BigInteger gq, BigInteger gd) throws InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException {
+		Security.addProvider(new BouncyCastleProvider());
+		this.p = new BigInteger(gp.toString());
+		this.q = new BigInteger(gq.toString());
+		n = p.multiply(q);
+		BigInteger qSub = q.subtract(BigInteger.ONE);
+		BigInteger pSub = p.subtract(BigInteger.ONE);
+		on = pSub.multiply(qSub);
+		this.d = new BigInteger(gd.toString());
 	    return;
 	}
 	
@@ -192,6 +205,9 @@ public class RSAService {
 	 * @throws BadPaddingException the bad padding exception
 	 */
 	public EncryptedCard encryptCard(Card card) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+		if (e == null){
+			return null;
+		}
 		String encCardData = String.valueOf(card.cardType) + card.suit;
 		EncryptedCard encCard = new EncryptedCard();
 		encCard.cardData = encrypt(encCardData.getBytes());
@@ -227,6 +243,9 @@ public class RSAService {
 	 * @throws BadPaddingException the bad padding exception
 	 */
 	public EncryptedCard encryptEncCard(EncryptedCard card) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+		if (e == null){
+			return null;
+		}
 		EncryptedCard encCard = new EncryptedCard();
 		encCard.cardData = encrypt(card.cardData);
 		return encCard;

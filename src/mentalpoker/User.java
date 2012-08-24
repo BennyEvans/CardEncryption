@@ -1,5 +1,6 @@
 package mentalpoker;
 
+import java.math.BigInteger;
 import java.util.UUID;
 
 /**
@@ -10,6 +11,7 @@ public class User implements java.io.Serializable{
 	private static final long serialVersionUID = -4529431771734590529L;
 	private String name;
 	private String id;
+	private BigInteger decryptionKey;
 	
 	/**
 	 * Instantiates a new user.
@@ -19,6 +21,7 @@ public class User implements java.io.Serializable{
 	public User(String name){
 		this.name = name.toString();
 		this.id = UUID.randomUUID().toString();
+		decryptionKey = null;
 	}
 	
 	/**
@@ -48,6 +51,18 @@ public class User implements java.io.Serializable{
 	 */
 	public String getID(){
 		return this.id.toString();
+	}
+	
+	public void setDecryptionKey(BigInteger key){
+		decryptionKey = new BigInteger(key.toString());
+	}
+	
+	public BigInteger getDecryptionKey(){
+		return new BigInteger(decryptionKey.toString());
+	}
+	
+	public boolean hasDecryptionKey(){
+		return !(decryptionKey == null);
 	}
 
 }

@@ -48,16 +48,21 @@ public class ComService {
 	
 	private BigInteger pq[] = null;
 	
+	private EncryptedDeck encryptedDeck;
+	
 	private final String NOT_TYPE = "TYPE";
 	private final String GAME_ID = "GAMEID";
+	private final String ENCRYPT_DECK_REQUEST = "encDReq";
+	private final String ENCRYPT_DECK_REPLY = "encDRep";
+	private final String ENCRYPTED_DECK = "encDeck";
+	private final String REQ_USER = "userRequested";
 	private final String JOIN_GAME = "newGameResponse";
 	private final String NEW_GAME = "newGame";
 	private final String GAME_FULL = "gameFull";
 	private final String GAME_USERS = "gameUsers";
 	private final String START_GAME = "startGame";
 	private final String BROADCAST_PQ = "broadcastpq";
-	private final String REQUEST_ENC_DECK = "requestEncDeck";
-	private final String REPLY_ENC_DECK = "requestEncDeckReply";
+	
 	
 	/** The notification handle. */
 	ScheduledFuture<?> notificationHandle;
@@ -562,20 +567,135 @@ public class ComService {
 	 * @param reqUser the user to request from
 	 * @param encDeck the encrypted deck
 	 * @return the new encrypted deck after reqUser has encrypted
+	 * @throws IOException 
+	 * @throws InterruptedException 
 	 */
-	public EncryptedDeck requestEncDeck(User reqUser, EncryptedDeck encDeck) {
-		// TODO: create a notification directed to reqUser with EncryptedDeck
-		// TODO: wait until reqUser has replied with new EncryptedDeck and return it
-		return null;
+	public EncryptedDeck requestEncDeck(User reqUser, EncryptedDeck encDeck) throws IOException, InterruptedException {
+
+		Notification not = new Notification();
+		encryptedDeck = null;
+		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REPLY +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
+
+		encSub.addListener(new NotificationListener() {
+			public void notificationReceived(NotificationEvent e) {
+				
+					byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_DECK);
+					
+					ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
+					ObjectInput in;
+					try {
+						in = new ObjectInputStream(bis);
+						encryptedDeck = (EncryptedDeck) in.readObject(); 
+						bis.close();
+						in.close();
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					
+					//notify the waiting thread that a message has arrived
+					synchronized (encSub) {
+						encSub.notify();
+					}
+
+			}
+		});
+		
+		//construct the notification to send
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		ObjectOutput out = null;
+		out = new ObjectOutputStream(bos);
+		out.writeObject(encDeck);
+		
+		byte[] tmpBytes = bos.toByteArray();
+		
+		not.set(NOT_TYPE, ENCRYPT_DECK_REQUEST);
+		not.set(GAME_ID, gameHost.getID());
+		not.set(REQ_USER, reqUser.getID());
+		not.set(ENCRYPTED_DECK, tmpBytes);
+
+		synchronized (encSub) {
+			//send notification
+			elvin.send(not);
+
+			//wait until received reply
+			encSub.wait();
+		}
+		
+		encSub.remove();
+
+		return encryptedDeck;
 	}
 
 	
 	/**
 	 * Wait for a request to encrypt the deck.
+	 * @throws IOException 
+	 * @throws InterruptedException 
 	 */
-	public void waitEncryptedDeck() {
-		// TODO: subscribe to notifications for your turn to encrypt the deck and return
-		return;
+	public boolean waitEncryptedDeck(RSAService rsaService) throws IOException, InterruptedException {
+		Notification not = new Notification();
+		encryptedDeck = null;
+		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REQUEST +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
+
+		encSub.addListener(new NotificationListener() {
+			public void notificationReceived(NotificationEvent e) {
+				
+					byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_DECK);
+					
+					ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
+					ObjectInput in;
+					try {
+						in = new ObjectInputStream(bis);
+						encryptedDeck = (EncryptedDeck) in.readObject(); 
+						bis.close();
+						in.close();
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					
+					//notify the waiting thread that a message has arrived
+					synchronized (encSub) {
+						encSub.notify();
+					}
+
+			}
+		});
+		
+		synchronized (encSub) {
+			//wait until received reply
+			encSub.wait();
+		}
+		
+		
+		//construct the notification to send
+		if (encryptedDeck == null){
+			encSub.remove();
+			return false;
+		}
+		
+		//need to encrypt the deck here
+		encryptedDeck.usersEncrypted.add(user);
+		
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		ObjectOutput out = null;
+		out = new ObjectOutputStream(bos);
+		out.writeObject(encryptedDeck);
+		
+		byte[] tmpBytes = bos.toByteArray();
+		
+		not.set(NOT_TYPE, ENCRYPT_DECK_REPLY);
+		not.set(GAME_ID, gameHost.getID());
+		not.set(REQ_USER, user.getID());
+		not.set(ENCRYPTED_DECK, tmpBytes);
+		
+		elvin.send(not);
+		
+		encSub.remove();
+		
+		return true;
+
 	}
 
 }
