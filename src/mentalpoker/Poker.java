@@ -111,6 +111,8 @@ public class Poker {
 				}
 			}
 
+			System.out.println("All Users have encrypted the deck!");
+			
 			//TODO: add more here later... the above will do for now
 			
 		} else {
@@ -122,6 +124,9 @@ public class Poker {
 			
 			//create rsaservice with given p and q
 			rsaService = new RSAService(p, q);
+			com.waitEncryptedDeck(rsaService);
+			
+			System.out.println("Got encrypted deck!");
 			//subscribe to receive the encrypted deck (com.waitEncryptedDeck)
 			
 			//TODO: add more here later... the above will do for now
@@ -141,12 +146,8 @@ public class Poker {
 	 * @throws IllegalBlockSizeException the illegal block size exception
 	 */
 	private EncryptedDeck createDeck(User user, RSAService rsaServ) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException{
-		Deck deck = new Deck(rsaServ, user);
-		EncryptedDeck encDeck = new EncryptedDeck();
-		for (int i = 0; i < Deck.NUM_CARDS; i++){
-			encDeck.encCards[i] = deck.getEncryptedCard(i);
-		}
-		encDeck.usersEncrypted.add(user);
+		Deck deck = new Deck();
+		EncryptedDeck encDeck = rsaServ.encryptDeck(deck, user);
 		return encDeck;
 	}
 

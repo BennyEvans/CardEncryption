@@ -3,7 +3,6 @@ package mentalpoker;
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Iterator;
 
 /**
  * The Class EncryptedDeck.
@@ -21,7 +20,7 @@ public class EncryptedDeck implements Serializable{
 	// Called at the end of the game
 	public boolean validateDeck(BigInteger p, BigInteger q){
 		//make sure each user has a decryption key
-		Iterator<User> itr = usersEncrypted.iterator();
+		//Iterator<User> itr = usersEncrypted.iterator();
 		
 		return false;
 	}

@@ -9,6 +9,7 @@ import java.io.ObjectInput;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
+import java.security.InvalidKeyException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.Executors;
@@ -17,6 +18,9 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.math.BigInteger;
 import java.net.ConnectException;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
 
 import org.avis.client.*;
 import org.avis.common.InvalidURIException;
@@ -632,8 +636,11 @@ public class ComService {
 	 * Wait for a request to encrypt the deck.
 	 * @throws IOException 
 	 * @throws InterruptedException 
+	 * @throws BadPaddingException 
+	 * @throws IllegalBlockSizeException 
+	 * @throws InvalidKeyException 
 	 */
-	public boolean waitEncryptedDeck(RSAService rsaService) throws IOException, InterruptedException {
+	public boolean waitEncryptedDeck(RSAService rsaService) throws IOException, InterruptedException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
 		Notification not = new Notification();
 		encryptedDeck = null;
 		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REQUEST +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
@@ -651,7 +658,6 @@ public class ComService {
 						bis.close();
 						in.close();
 					} catch (Exception e1) {
-						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}
 					
@@ -675,13 +681,13 @@ public class ComService {
 			return false;
 		}
 		
-		//need to encrypt the deck here
-		encryptedDeck.usersEncrypted.add(user);
+		//encrypt the deck
+		EncryptedDeck encDeck = rsaService.encryptEncDeck(encryptedDeck, user);
 		
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		ObjectOutput out = null;
 		out = new ObjectOutputStream(bos);
-		out.writeObject(encryptedDeck);
+		out.writeObject(encDeck);
 		
 		byte[] tmpBytes = bos.toByteArray();
 		
@@ -693,7 +699,6 @@ public class ComService {
 		elvin.send(not);
 		
 		encSub.remove();
-		
 		return true;
 
 	}
