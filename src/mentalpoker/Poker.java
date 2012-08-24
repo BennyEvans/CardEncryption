@@ -14,6 +14,7 @@ import java.util.Iterator;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.swing.SwingUtilities;
 
 import org.avis.client.InvalidSubscriptionException;
 
@@ -176,13 +177,22 @@ public class Poker {
 	 * @param args the arguments
 	 */
 	public static void main(String[] args) {
-		try {
-			
-			new Poker();
+		
+		javax.swing.SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+            	SwingGUI.showGUI();
 
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+            	/*
+            	 * This stuff is disabled for the moment because it includes its own loops.
+            	 */
+            	//    			try {
+            	//					new Poker();
+            	//				} catch (Exception e) {
+            	//					// TODO Auto-generated catch block
+            	//					e.printStackTrace();
+            	//				}
+            }
+        });
 	}
 	
 }

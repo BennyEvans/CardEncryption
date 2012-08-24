@@ -192,7 +192,7 @@ public class ComService {
 
 		//Receive requests to join the game.
 		gameSub.addListener(new NotificationListener() {
-			// This is called if we have a response requesting to join our game.
+			// This is called if we emile a response requesting to join our game.
 			public void notificationReceived(NotificationEvent event) {
 				if (currentGameMembers.size() < numberOfSlots) {
 					
