@@ -25,4 +25,5 @@ public class EncryptedDeck implements Serializable{
 		return false;
 	}
 	
+	
 }

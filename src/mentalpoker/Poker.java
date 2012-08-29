@@ -10,6 +10,7 @@ import java.security.NoSuchProviderException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Random;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -113,6 +114,31 @@ public class Poker {
 			}
 
 			System.out.println("All Users have encrypted the deck!");
+			
+			//choose random cards for each user
+			ArrayList<Integer> chosenCards = new ArrayList<Integer>();
+			Random rnd;
+			
+			for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
+				rnd = new Random();
+				Integer tmpIntFirst = new Integer(rnd.nextInt());
+				Integer tmpIntSecond = new Integer(rnd.nextInt());
+				
+				while (chosenCards.contains(tmpIntFirst) == false){
+					tmpIntFirst = new Integer(rnd.nextInt());
+				}
+				
+				while (!chosenCards.contains(tmpIntSecond) && !tmpIntFirst.equals(tmpIntSecond)){
+					tmpIntSecond = new Integer(rnd.nextInt());
+				}
+				chosenCards.add(tmpIntFirst);
+				chosenCards.add(tmpIntSecond);
+				
+				//
+				usr.next();
+				//assign the user the card
+			}
+			
 			
 			//TODO: add more here later... the above will do for now
 			

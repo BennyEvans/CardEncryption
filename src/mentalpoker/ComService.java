@@ -702,5 +702,23 @@ public class ComService {
 		return true;
 
 	}
+	
+	//sends each user their fully encrypted hand
+	public void sendEncryptedHand(User usr, EncryptedHand hand){
+		return;
+	}
+	
+	//wait to get your fully encrypted hand and decrypt it by requesting from each user
+	public Hand waitEncryptedHand(){
+		return null;
+	}
+	
+	//THIS FUNCTION NEEDS TO BE CALLED BEFORE waitEncryptedHand()
+	//asynchronous function - takes requests to decrypt an encrypted hand
+	public void decryptEncryptedHands(RSAService rsaService){
+		//should setup an asynchronous subscription and cancel when 
+		//all we have decrypted all users encrypted hands
+	}
+	
 
 }
