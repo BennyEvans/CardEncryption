@@ -1,12 +1,11 @@
 package mentalpoker;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 
 /**
  * The Class EncryptedCard.
  */
-public class EncryptedCard implements Serializable {
+public class EncryptedCard implements java.io.Serializable {
 
 	/** The Constant serialVersionUID. */
 	private static final long serialVersionUID = -7822886716123630716L;

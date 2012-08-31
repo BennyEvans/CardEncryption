@@ -3,7 +3,6 @@ package mentalpoker;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.math.BigInteger;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -15,7 +14,6 @@ import java.util.Random;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-import javax.swing.SwingUtilities;
 
 import org.avis.client.InvalidSubscriptionException;
 
@@ -65,8 +63,6 @@ public class Poker {
 		int menuChoice = MenuOptions.printMainMenu();
 		boolean isGameHost = false;
 		ArrayList<User> gameUsers = null;
-		EncryptedDeck encDeck = null;
-		RSAService rsaService;
 
 		if (menuChoice == MenuOptions.HOST_GAME)
 		{
@@ -93,71 +89,82 @@ public class Poker {
 		for (int i = 0; i < gameUsers.size(); i++){
 			System.out.println(gameUsers.get(i).getUsername() + " " + gameUsers.get(i).getID());
 		}
+		System.out.println("");
 		
-		//once com.startNewGame or com.joinGameOffMenu have returned the game is ready...
+
 		if (isGameHost){
-			rsaService = new RSAService();
-			//broadcast p and q
-			com.broadcastPQ(rsaService.getP(), rsaService.getQ());
-			System.out.println(rsaService.getP().toString() + "\n" + rsaService.getQ().toString());
-			//create and encrypt the deck
-			encDeck = createDeck(gameUser, rsaService);
-			
-			//NEED TO CREATE A COPY OF encDeck for validation?
-			
-			//let users create an instance of rsaService before sending out cards
-			Thread.sleep(2000);
-			//for each user in gameUsers request to encrypt the deck
-			for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
-				User tmpUser = usr.next();
-				if (!tmpUser.getID().equals(gameUser.getID())){
-					encDeck = com.requestEncDeck(tmpUser, encDeck);
-				}
-			}
-
-			//System.out.println("First Card: " + encDeck.encCards[0].cardData.toString());
-
-			System.out.println("All Users have encrypted the deck!");
-			
-			//choose random cards for each user
-			ArrayList<Integer> chosenCards = new ArrayList<Integer>();
-			Random rnd;
-			
-			for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
-				EncryptedHand hand = new EncryptedHand();
-				int count = 0;
-				rnd = new Random();
-				Integer tmpInt = new Integer(rnd.nextInt(Deck.NUM_CARDS));
-				//Integer tmpIntSecond = new Integer(rnd.nextInt());
-				while (count < Hand.NUM_CARDS){
-					while (chosenCards.contains(tmpInt)){
-						tmpInt = new Integer(Deck.NUM_CARDS);
-					}
-					chosenCards.add(tmpInt);
-					hand.encCards[count] = encDeck.encCards[tmpInt];
-				}
-				com.sendEncryptedHand(usr.next(), hand);
-			}
-			
-			
-			//TODO: add more here later... the above will do for now
-			
+			playGameAsHost(gameUsers);
 		} else {
-			//get p and q
-			BigInteger tmp[] = com.waitPQ();
-			BigInteger p = tmp[0];
-			BigInteger q = tmp[1];
-			System.out.println(p.toString() + "\n" + q.toString());
-			
-			//create rsaservice with given p and q
-			rsaService = new RSAService(p, q);
-			com.waitEncryptedDeck(rsaService);
-			
-			System.out.println("Got encrypted deck!");
-			//subscribe to receive the encrypted deck (com.waitEncryptedDeck)
-			
-			//TODO: add more here later... the above will do for now
+			 playGameAsPlayer(gameUsers);
 		}
+		
+		return;
+	}
+	
+	private void playGameAsHost(ArrayList<User> gameUsers) throws IOException, InterruptedException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
+		EncryptedDeck encDeck = null;
+		RSAService rsaService = new RSAService();
+		EncryptedHand myHand;
+
+		//broadcast p and q
+		com.broadcastPQ(rsaService.getP(), rsaService.getQ(), gameUsers.size());
+		System.out.println(rsaService.getP().toString() + "\n" + rsaService.getQ().toString());
+		//create and encrypt the deck
+		encDeck = createDeck(gameUser, rsaService);
+	
+		//for each user in gameUsers request to encrypt the deck
+		for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
+			User tmpUser = usr.next();
+			if (!tmpUser.getID().equals(gameUser.getID())){
+				encDeck = com.requestEncDeck(tmpUser, encDeck);
+			}
+		}
+
+		//String tmpStr = new String(encDeck.encCards.get(0).cardData);
+		//System.out.println("First Card: " + tmpStr.toString());
+		System.out.println("All Users have encrypted the deck!");
+		
+		//choose random cards for each user
+		ArrayList<Integer> chosenCards = new ArrayList<Integer>();
+		Random rnd;
+		
+		for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
+			EncryptedHand hand = new EncryptedHand();
+			User tmpUser = usr.next();
+			int count = 0;
+			rnd = new Random();
+			
+			Integer tmpInt = new Integer(rnd.nextInt(Deck.NUM_CARDS - 1));
+
+			while (count < Hand.NUM_CARDS){
+				while (chosenCards.contains(tmpInt)){
+					tmpInt = new Integer(rnd.nextInt(Deck.NUM_CARDS - 1));
+				}
+				chosenCards.add(tmpInt);
+				hand.encCards.add(encDeck.encCards.get(tmpInt));
+				count++;
+			}
+			if (!tmpUser.getID().equals(gameUser.getID())){
+				//these are my cards
+				myHand = hand;
+			} else {
+				com.sendEncryptedHand(tmpUser, hand);
+			}
+		}
+		
+		return;
+	}
+	
+	
+	private void playGameAsPlayer(ArrayList<User> gameUsers) throws InvalidSubscriptionException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException, InterruptedException, IOException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+		RSAService rsaService = com.waitPQ();
+		EncryptedHand myHand;
+
+		com.waitEncryptedDeck(rsaService);
+		System.out.println("Got encrypted deck and encrypted again with my key!");
+		
+		//wait for cards
+		myHand = com.waitEncryptedHand();
 		
 		return;
 	}
@@ -213,6 +220,7 @@ public class Poker {
     		// TODO Auto-generated catch block
     		e.printStackTrace();
     	}
+		System.exit(0);
 		
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
             public void run() {

@@ -10,6 +10,9 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.Executors;
@@ -21,6 +24,7 @@ import java.net.ConnectException;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 import org.avis.client.*;
 import org.avis.common.InvalidURIException;
@@ -47,6 +51,8 @@ public class ComService {
 	/** The current game members. */
 	private ArrayList<User> currentGameMembers = new ArrayList<User>();
 	
+	private int numResponses;
+	
 	/** The available games. */
 	private ArrayList<User> availableGames = new ArrayList<User>();
 	
@@ -66,6 +72,7 @@ public class ComService {
 	private final String GAME_USERS = "gameUsers";
 	private final String START_GAME = "startGame";
 	private final String BROADCAST_PQ = "broadcastpq";
+	private final String BROADCAST_PQ_REPLY = "broadcastpqreply";
 	
 	
 	/** The notification handle. */
@@ -516,16 +523,39 @@ public class ComService {
 	 * @throws InterruptedException 
 	 * @throws IOException 
 	 */
-	public void broadcastPQ(BigInteger p, BigInteger q) throws InterruptedException, IOException {
-
+	public void broadcastPQ(final BigInteger p, final BigInteger q, final int numUsers) throws InterruptedException, IOException {
+		
+		final Subscription pqSub = elvin.subscribe(NOT_TYPE + " == '" + BROADCAST_PQ_REPLY +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
 		Notification pqnot = new Notification();
+		numResponses = 1;
+		
+		pqSub.addListener(new NotificationListener() {
+			public void notificationReceived(NotificationEvent e) {
+				
+					numResponses++;
+					if (numResponses >= numUsers){
+						synchronized (pqSub) {
+							pqSub.notify();
+						}
+					}
+			}
+		});
+
 		pqnot.set(GAME_ID, gameHost.getID());
 		pqnot.set(NOT_TYPE, BROADCAST_PQ);
 		pqnot.set("p", p.toString());
 		pqnot.set("q", q.toString());
 		elvin.send(pqnot);
+		
+		synchronized (pqSub) {
+			elvin.send(pqnot);
+			//wait until received reply
+			pqSub.wait();
+		}
+		
 		//short sleep before returning
-		Thread.sleep(200);
+		Thread.sleep(100);
+		
 		return;
 	}
 
@@ -537,11 +567,17 @@ public class ComService {
 	 * @throws InterruptedException 
 	 * @throws IOException 
 	 * @throws InvalidSubscriptionException 
+	 * @throws NoSuchProviderException 
+	 * @throws NoSuchPaddingException 
+	 * @throws NoSuchAlgorithmException 
+	 * @throws InvalidKeySpecException 
 	 */
-	public BigInteger[] waitPQ() throws InterruptedException, InvalidSubscriptionException, IOException {
+	public RSAService waitPQ() throws InterruptedException, InvalidSubscriptionException, IOException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException {
 
 		final Subscription pqSub = elvin.subscribe(NOT_TYPE + " == '" + BROADCAST_PQ +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
-
+		Notification pqnot = new Notification();
+		RSAService ret;
+		
 		pqSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
 				
@@ -561,7 +597,18 @@ public class ComService {
 			pqSub.wait();
 		}
 		
-		return pq;
+		ret = new RSAService(pq[0], pq[1]);
+		
+		System.out.println(pq[0].toString() + "\n" + pq[1].toString());
+		
+		pqnot.set(GAME_ID, gameHost.getID());
+		pqnot.set(NOT_TYPE, BROADCAST_PQ_REPLY);
+		elvin.send(pqnot);
+		
+		pqSub.remove();
+		
+		return ret;
+		
 	}
 
 	
@@ -578,10 +625,7 @@ public class ComService {
 
 		Notification not = new Notification();
 		encryptedDeck = null;
-		//final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REPLY +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
-
-		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REPLY +"'");
-		
+		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REPLY +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
 		
 		encSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
@@ -647,9 +691,7 @@ public class ComService {
 	public boolean waitEncryptedDeck(RSAService rsaService) throws IOException, InterruptedException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
 		Notification not = new Notification();
 		encryptedDeck = null;
-		//final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REQUEST +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
-		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REQUEST +"'");
-		
+		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REQUEST +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
 		
 		encSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
@@ -687,10 +729,12 @@ public class ComService {
 			return false;
 		}
 		
-		//encrypt the deck
+		//encrypt and shuffle the deck
 		EncryptedDeck encDeck = rsaService.encryptEncDeck(encryptedDeck, user);
+		encDeck.shuffleDeck();
 		
-		//System.out.println("First Card: " + encDeck.encCards[0].cardData.toString());
+		//String tmpStr = new String(encDeck.encCards.get(0).cardData);
+		//System.out.println("First Card: " + tmpStr.toString());
 		
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		ObjectOutput out = null;
@@ -703,6 +747,7 @@ public class ComService {
 		not.set(GAME_ID, gameHost.getID());
 		not.set(REQ_USER, user.getID());
 		not.set(ENCRYPTED_DECK, tmpBytes);
+		
 		
 		elvin.send(not);
 		
@@ -717,7 +762,7 @@ public class ComService {
 	}
 	
 	//wait to get your fully encrypted hand and decrypt it by requesting from each user
-	public Hand waitEncryptedHand(){
+	public EncryptedHand waitEncryptedHand(){
 		return null;
 	}
 	
