@@ -105,6 +105,8 @@ public class Poker {
 			
 			//NEED TO CREATE A COPY OF encDeck for validation?
 			
+			//let users create an instance of rsaService before sending out cards
+			Thread.sleep(2000);
 			//for each user in gameUsers request to encrypt the deck
 			for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
 				User tmpUser = usr.next();
@@ -113,6 +115,8 @@ public class Poker {
 				}
 			}
 
+			//System.out.println("First Card: " + encDeck.encCards[0].cardData.toString());
+
 			System.out.println("All Users have encrypted the deck!");
 			
 			//choose random cards for each user
@@ -120,23 +124,19 @@ public class Poker {
 			Random rnd;
 			
 			for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
+				EncryptedHand hand = new EncryptedHand();
+				int count = 0;
 				rnd = new Random();
-				Integer tmpIntFirst = new Integer(rnd.nextInt());
-				Integer tmpIntSecond = new Integer(rnd.nextInt());
-				
-				while (chosenCards.contains(tmpIntFirst) == false){
-					tmpIntFirst = new Integer(rnd.nextInt());
+				Integer tmpInt = new Integer(rnd.nextInt(Deck.NUM_CARDS));
+				//Integer tmpIntSecond = new Integer(rnd.nextInt());
+				while (count < Hand.NUM_CARDS){
+					while (chosenCards.contains(tmpInt)){
+						tmpInt = new Integer(Deck.NUM_CARDS);
+					}
+					chosenCards.add(tmpInt);
+					hand.encCards[count] = encDeck.encCards[tmpInt];
 				}
-				
-				while (!chosenCards.contains(tmpIntSecond) && !tmpIntFirst.equals(tmpIntSecond)){
-					tmpIntSecond = new Integer(rnd.nextInt());
-				}
-				chosenCards.add(tmpIntFirst);
-				chosenCards.add(tmpIntSecond);
-				
-				//
-				usr.next();
-				//assign the user the card
+				com.sendEncryptedHand(usr.next(), hand);
 			}
 			
 			
@@ -204,19 +204,21 @@ public class Poker {
 	 */
 	public static void main(String[] args) {
 		
+    	/*
+    	 * This stuff is disabled for the moment because it includes its own loops.
+    	 */
+		try {
+    		new Poker();
+    	} catch (Exception e) {
+    		// TODO Auto-generated catch block
+    		e.printStackTrace();
+    	}
+		
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
             public void run() {
+            	
             	SwingGUI.showGUI();
 
-            	/*
-            	 * This stuff is disabled for the moment because it includes its own loops.
-            	 */
-            	//    			try {
-            	//					new Poker();
-            	//				} catch (Exception e) {
-            	//					// TODO Auto-generated catch block
-            	//					e.printStackTrace();
-            	//				}
             }
         });
 	}

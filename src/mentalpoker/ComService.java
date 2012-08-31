@@ -525,7 +525,7 @@ public class ComService {
 		pqnot.set("q", q.toString());
 		elvin.send(pqnot);
 		//short sleep before returning
-		Thread.sleep(100);
+		Thread.sleep(200);
 		return;
 	}
 
@@ -578,8 +578,11 @@ public class ComService {
 
 		Notification not = new Notification();
 		encryptedDeck = null;
-		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REPLY +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
+		//final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REPLY +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
 
+		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REPLY +"'");
+		
+		
 		encSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
 				
@@ -621,6 +624,7 @@ public class ComService {
 		synchronized (encSub) {
 			//send notification
 			elvin.send(not);
+			System.out.println("Sending encrypt deck request to user - " + reqUser.getID());
 
 			//wait until received reply
 			encSub.wait();
@@ -643,8 +647,10 @@ public class ComService {
 	public boolean waitEncryptedDeck(RSAService rsaService) throws IOException, InterruptedException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
 		Notification not = new Notification();
 		encryptedDeck = null;
-		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REQUEST +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
-
+		//final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REQUEST +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
+		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REQUEST +"'");
+		
+		
 		encSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
 				
@@ -683,6 +689,8 @@ public class ComService {
 		
 		//encrypt the deck
 		EncryptedDeck encDeck = rsaService.encryptEncDeck(encryptedDeck, user);
+		
+		//System.out.println("First Card: " + encDeck.encCards[0].cardData.toString());
 		
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		ObjectOutput out = null;
