@@ -46,6 +46,7 @@ public class Poker {
 	
 	/**
 	 * Start game.
+	 * @return 
 	 *
 	 * @throws InvalidKeyException the invalid key exception
 	 * @throws BadPaddingException the bad padding exception
@@ -58,24 +59,18 @@ public class Poker {
 	 * @throws NoSuchAlgorithmException 
 	 * @throws InvalidKeySpecException 
 	 */
-	private void StartGame() throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidSubscriptionException, InterruptedException, IOException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
+	public void StartGame(boolean isGameHost, int slots) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidSubscriptionException, InterruptedException, IOException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
 		//Menu choice becomes the integer chosen by the user.
-		int menuChoice = MenuOptions.printMainMenu();
-		boolean isGameHost = false;
+		//int menuChoice = MenuOptions.printMainMenu();
 		ArrayList<User> gameUsers = null;
 
-		if (menuChoice == MenuOptions.HOST_GAME)
+		
+		if (isGameHost)
 		{
-			isGameHost = true;
-			gameUsers = com.startNewGame(MenuOptions.startNewGameMenu());
-		} else if (menuChoice == MenuOptions.JOIN_GAME) {
-			isGameHost = false;
-			gameUsers = com.joinGameOffMenu();
-		} else if (menuChoice == Integer.MIN_VALUE)
+			gameUsers = com.startNewGame(slots);
+		} else if (!isGameHost)
 		{
-			System.err.println("Sorry, I was unable to recognise what your input as a number. Try numbers, like 1,2,3 etc.");
-			StartGame();
-			return;
+			//Need more logic here.
 		}
 		
 		if (gameUsers == null){
