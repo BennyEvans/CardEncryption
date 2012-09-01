@@ -26,7 +26,7 @@ public class Poker {
 	ComService com;
 	
 	/** The game user. */
-	private User gameUser;
+	private static User gameUser;
 
 
 	/**
@@ -37,7 +37,7 @@ public class Poker {
 	public Poker() throws Exception {
 		
 		setUsername();
-		com = new ComService(gameUser, "elvin://elvin.students.itee.uq.edu.au");
+		com = new ComService(getGameUser(), "elvin://elvin.students.itee.uq.edu.au");
 		StartGame();
 		return;
 
@@ -110,12 +110,12 @@ public class Poker {
 		com.broadcastPQ(rsaService.getP(), rsaService.getQ(), gameUsers.size());
 		System.out.println(rsaService.getP().toString() + "\n" + rsaService.getQ().toString());
 		//create and encrypt the deck
-		encDeck = createDeck(gameUser, rsaService);
+		encDeck = createDeck(getGameUser(), rsaService);
 	
 		//for each user in gameUsers request to encrypt the deck
 		for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
 			User tmpUser = usr.next();
-			if (!tmpUser.getID().equals(gameUser.getID())){
+			if (!tmpUser.getID().equals(getGameUser().getID())){
 				encDeck = com.requestEncDeck(tmpUser, encDeck);
 			}
 		}
@@ -144,7 +144,7 @@ public class Poker {
 				hand.encCards.add(encDeck.encCards.get(tmpInt));
 				count++;
 			}
-			if (!tmpUser.getID().equals(gameUser.getID())){
+			if (!tmpUser.getID().equals(getGameUser().getID())){
 				//these are my cards
 				myHand = hand;
 			} else {
@@ -195,7 +195,7 @@ public class Poker {
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
 		try {
-			gameUser = new User(br.readLine());
+			setGameUser(new User(br.readLine()));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -214,13 +214,13 @@ public class Poker {
     	/*
     	 * This stuff is disabled for the moment because it includes its own loops.
     	 */
-		try {
+		/*try {
     		new Poker();
     	} catch (Exception e) {
     		// TODO Auto-generated catch block
     		e.printStackTrace();
     	}
-		System.exit(0);
+		System.exit(0);*/
 		
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
             public void run() {
@@ -229,6 +229,16 @@ public class Poker {
 
             }
         });
+	}
+
+
+	public static User getGameUser() {
+		return gameUser;
+	}
+
+
+	public static void setGameUser(User gameUserl) {
+		gameUser = gameUserl;
 	}
 	
 }
