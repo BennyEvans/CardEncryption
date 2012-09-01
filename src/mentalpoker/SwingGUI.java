@@ -11,6 +11,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -24,6 +25,10 @@ public class SwingGUI extends JPanel implements ActionListener {
 	protected JLabel usernameLabel;
 	protected static JFrame frame;
 	protected static JFrame joinOrHostGameFrame;
+	private Poker poker;
+	private JComboBox numberOfSlots;
+	private JPanel slotChoiceLayout;
+	private JPanel joinOrHostPagePanel;
 	
 	//Names of the panes
 	final static String usernameInputTitle = "usernameInputPane";
@@ -59,7 +64,9 @@ public class SwingGUI extends JPanel implements ActionListener {
 		/**
 		 * Game choice card
 		 */
-		JPanel joinOrHostPagePanel = new JPanel();
+		
+		JPanel joinOrHostPageOuterLayout = new JPanel(new GridLayout(0,1));
+		joinOrHostPagePanel = new JPanel();
 		
 		JButton joinGame = new JButton("Join Game");
 		JButton hostGame = new JButton("Host Game");
@@ -70,10 +77,24 @@ public class SwingGUI extends JPanel implements ActionListener {
 		joinOrHostPagePanel.add(hostGame);
 		joinOrHostPagePanel.add(joinGame);
 		
+		//Create a textbox and input button to display the game host choices
+		slotChoiceLayout = new JPanel(new GridLayout(0,1));
+		String[] slots = {"1","2","3","4","5","6","7","8","9","10"};
+		numberOfSlots = new JComboBox(slots);
+		JButton startGameButton = new JButton("Start Game");
+		startGameButton.setActionCommand("startGameWithSlots");
+		startGameButton.addActionListener(this);
+		slotChoiceLayout.add(numberOfSlots);
+		slotChoiceLayout.add(startGameButton);
+		slotChoiceLayout.setVisible(false); //This is hidden, will be shown later.
+		
+		joinOrHostPageOuterLayout.add(joinOrHostPagePanel);
+		joinOrHostPageOuterLayout.add(slotChoiceLayout);
+		
 		
 		cards = new JPanel(new CardLayout());
 		cards.add(usernameInputPaneGridLayout, usernameInputTitle);
-		cards.add(joinOrHostPagePanel,joinOrHostTitle);
+		cards.add(joinOrHostPageOuterLayout,joinOrHostTitle);
 		
 		
 		pane.add(cards, BorderLayout.CENTER);
@@ -107,6 +128,20 @@ public class SwingGUI extends JPanel implements ActionListener {
 		{
 			String username = usernameField.getText();
 			usernameAccepted(username);
+			CardLayout cl = (CardLayout)(cards.getLayout());
+			cl.show(cards, joinOrHostTitle);
+			try {
+				poker = new Poker();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+		} else if ("hostGame".equals(arg0.getActionCommand()))
+		{
+			joinOrHostPagePanel.setVisible(false);
+			
+			slotChoiceLayout.setVisible(true);
 		}
 	}
 	

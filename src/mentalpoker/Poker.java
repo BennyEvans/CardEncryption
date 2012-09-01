@@ -36,9 +36,9 @@ public class Poker {
 	 */
 	public Poker() throws Exception {
 		
-		setUsername();
+		//setUsername();
 		com = new ComService(getGameUser(), "elvin://elvin.students.itee.uq.edu.au");
-		StartGame();
+		//StartGame();
 		return;
 
 	}
