@@ -15,6 +15,8 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
+import mentalpoker.SwingGUI.HostGameTask;
+
 import org.avis.client.InvalidSubscriptionException;
 
 /**
@@ -59,25 +61,22 @@ public class Poker {
 	 * @throws NoSuchAlgorithmException 
 	 * @throws InvalidKeySpecException 
 	 */
-	public void StartGame(boolean isGameHost, int slots) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidSubscriptionException, InterruptedException, IOException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
+	public ArrayList<User> StartGame(boolean isGameHost, int slots, HostGameTask hgt) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidSubscriptionException, InterruptedException, IOException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
 		//Menu choice becomes the integer chosen by the user.
 		//int menuChoice = MenuOptions.printMainMenu();
 		ArrayList<User> gameUsers = null;
 
-		
 		if (isGameHost)
 		{
-			gameUsers = com.startNewGame(slots);
-		} else if (!isGameHost)
-		{
-			//Need more logic here.
+			gameUsers = com.startNewGame(slots,hgt);
+			return gameUsers;
 		}
 		
 		if (gameUsers == null){
 			//could call startGame() here but exit is good enough for now
 			com.shutdown();
 			System.exit(1);
-			return;
+			return null;
 		}
 		
 		System.out.println("\nGame Players:");
@@ -93,7 +92,7 @@ public class Poker {
 			 playGameAsPlayer(gameUsers);
 		}
 		
-		return;
+		return null;
 	}
 	
 	private void playGameAsHost(ArrayList<User> gameUsers) throws IOException, InterruptedException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{

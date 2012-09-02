@@ -26,6 +26,8 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
+import mentalpoker.SwingGUI.HostGameTask;
+
 import org.avis.client.*;
 import org.avis.common.InvalidURIException;
 
@@ -38,6 +40,13 @@ public class ComService {
 
 	/** The user current. */
 	private User user;
+	
+	/**
+	 *  Parent swingworker
+	 *  This is used to call publish() on the parent!!!
+	 */
+	
+	private HostGameTask hgt;
 	
 	/** The game host. */
 	private User gameHost;
@@ -150,9 +159,10 @@ public class ComService {
 	 * @throws IOException 
 	 * @throws InvalidSubscriptionException 
 	 */
-	public ArrayList<User> startNewGame(final int numberOfSlots) throws InterruptedException, InvalidSubscriptionException, IOException {
+	public ArrayList<User> startNewGame(final int numberOfSlots, final HostGameTask hgt) throws InterruptedException, InvalidSubscriptionException, IOException {
 		
 		gameHost = user;
+		this.hgt = hgt; //Brings in a copy of the swingworker so that we can publish things.
 		
 		//notify potential players that there is a game
 		final Runnable notifyPotentialJoiners = new Runnable() {
@@ -196,6 +206,7 @@ public class ComService {
 
 
 		System.out.println("Now hosting game...");
+		this.hgt.publishDelegate("Now hosting game...");
 
 		//Receive requests to join the game.
 		gameSub.addListener(new NotificationListener() {
@@ -212,6 +223,11 @@ public class ComService {
 					String numberOfSlotsLeft = Integer.toString(numberOfSlots - currentGameMembers.size());
 					System.out.println(event.notification.getString("playerUsername")
 							+ " connected... " + numberOfSlotsLeft + " slots left.");
+					
+					//Publish to swingworker
+					hgt.publishDelegate(event.notification.getString("playerUsername")
+							+ " connected... " + numberOfSlotsLeft + " slots left.");
+					
 					
 					if (currentGameMembers.size() == numberOfSlots){
 						//send start game notification
