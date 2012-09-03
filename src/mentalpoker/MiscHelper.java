@@ -12,7 +12,7 @@ public class MiscHelper {
 
 	public static void clearConsole()
 	{
-		for (int i = 0; i < 100; i++)
+		for (int i = 0; i < 4; i++)
 		{
 			System.out.println("\n");
 		}

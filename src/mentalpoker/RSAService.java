@@ -308,13 +308,30 @@ public class RSAService {
 		}
 		encDeck.usersEncrypted.add(usr);
 		for (int i = 0; i < Deck.NUM_CARDS; i++){
-			EncryptedCard tmp = encDeck.encCards.get(i);
-			tmp.addEncUser(usr);
-			encDeck.encCards.set(i, encryptEncCard(tmp));
+			EncryptedCard tmp = encDeck.data.get(i);
+			encDeck.data.set(i, encryptEncCard(tmp));
 		}
 		return encDeck;
 	}
 	
+	
+	public EncryptedHand decyrptEncHand(EncryptedHand hand) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+		EncryptedHand ret = new EncryptedHand();
+		for (int i = 0; i < Hand.NUM_CARDS; i++){
+			EncryptedCard tmp = hand.data.get(i);
+			ret.data.add(decryptEncCard(tmp));
+		}
+		return ret;
+	}
+	
+	public Hand decyrptHand(EncryptedHand hand) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+		Hand ret = new Hand();
+		for (int i = 0; i < Hand.NUM_CARDS; i++){
+			EncryptedCard tmp = hand.data.get(i);
+			ret.cards.add(decryptCard(tmp));
+		}
+		return ret;
+	}
 	
 	/**
 	 * Encrypt deck.
@@ -335,11 +352,10 @@ public class RSAService {
 		encDeck.usersEncrypted.add(usr);
 		for (int i = 0; i < Deck.NUM_CARDS; i++){
 			EncryptedCard tmp = encryptCard(deck.getCardAtIndex(i));
-			tmp.addEncUser(usr);
-			if (i >= encDeck.encCards.size()){
-				encDeck.encCards.add(tmp);
+			if (i >= encDeck.data.size()){
+				encDeck.data.add(tmp);
 			} else {
-				encDeck.encCards.set(i, tmp);
+				encDeck.data.set(i, tmp);
 			}
 
 		}
