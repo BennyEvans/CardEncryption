@@ -71,19 +71,9 @@ public class Poker {
 		
 		//send your public key to anyone who requests it
 		//com.acceptPubKeySigRequests(sig.getPublicKey());
-		
-		int menuChoice = 0;
-		if (menuChoice == MenuOptions.HOST_GAME)
+		if (isGameHost)
 		{
-			isGameHost = true;
 			gameUsers = com.startNewGame(MenuOptions.startNewGameMenu(), hgt);
-		} else if (menuChoice == MenuOptions.JOIN_GAME) {
-			isGameHost = false;
-			gameUsers = com.joinGameOffMenu(null);
-		} else if (menuChoice == Integer.MIN_VALUE)
-		{
-			gameUsers = com.startNewGame(slots,hgt);
-			return gameUsers;
 		}
 		
 		if (gameUsers == null){
