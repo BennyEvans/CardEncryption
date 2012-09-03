@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -27,6 +28,9 @@ public class Poker {
 	
 	/** The game user. */
 	private User gameUser;
+	
+	SigService sig;
+	
 
 
 	/**
@@ -36,8 +40,9 @@ public class Poker {
 	 */
 	public Poker() throws Exception {
 		
+		sig = new SigService();
 		setUsername();
-		com = new ComService(gameUser, "elvin://elvin.students.itee.uq.edu.au");
+		com = new ComService(gameUser, "elvin://elvin.students.itee.uq.edu.au", sig);
 		StartGame();
 		return;
 
@@ -63,7 +68,10 @@ public class Poker {
 		int menuChoice = MenuOptions.printMainMenu();
 		boolean isGameHost = false;
 		ArrayList<User> gameUsers = null;
-
+		
+		//send your public key to anyone who requests it
+		//com.acceptPubKeySigRequests(sig.getPublicKey());
+		
 		if (menuChoice == MenuOptions.HOST_GAME)
 		{
 			isGameHost = true;
@@ -87,6 +95,7 @@ public class Poker {
 		
 		System.out.println("\nGame Players:");
 		for (int i = 0; i < gameUsers.size(); i++){
+			//System.out.println(gameUsers.get(i).getUsername() + " " + gameUsers.get(i).getID() + new String(gameUsers.get(i).getPublicKey().getEncoded()));
 			System.out.println(gameUsers.get(i).getUsername() + " " + gameUsers.get(i).getID());
 		}
 		System.out.println("");
@@ -111,16 +120,28 @@ public class Poker {
 		System.out.println(rsaService.getP().toString() + "\n" + rsaService.getQ().toString());
 		//create and encrypt the deck
 		encDeck = createDeck(gameUser, rsaService);
+		
 	
 		//for each user in gameUsers request to encrypt the deck
 		for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
 			User tmpUser = usr.next();
 			if (!tmpUser.getID().equals(gameUser.getID())){
+				//sign the message
+				sig.createSignature(encDeck);
+				
+				//request user to encrypt the deck
 				encDeck = com.requestEncDeck(tmpUser, encDeck);
+				
+				//check the reply was from the user
+				if (!sig.validateSignature(encDeck, tmpUser.getPublicKey())){
+					com.callCheat();
+					com.shutdown();
+					System.exit(2);
+				}
 			}
 		}
 
-		//String tmpStr = new String(encDeck.encCards.get(0).cardData);
+		//String tmpStr = new String(encDeck.data.get(0).cardData);
 		//System.out.println("First Card: " + tmpStr.toString());
 		System.out.println("All Users have encrypted the deck!");
 		
@@ -141,7 +162,7 @@ public class Poker {
 					tmpInt = new Integer(rnd.nextInt(Deck.NUM_CARDS - 1));
 				}
 				chosenCards.add(tmpInt);
-				hand.encCards.add(encDeck.encCards.get(tmpInt));
+				hand.data.add(encDeck.data.get(tmpInt));
 				count++;
 			}
 			if (!tmpUser.getID().equals(gameUser.getID())){
@@ -159,8 +180,11 @@ public class Poker {
 	private void playGameAsPlayer(ArrayList<User> gameUsers) throws InvalidSubscriptionException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException, InterruptedException, IOException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
 		RSAService rsaService = com.waitPQ();
 		EncryptedHand myHand;
+		
+		PublicKey gameHostsPubKey = gameUsers.get(gameUsers.size()-1).getPublicKey();
 
-		com.waitEncryptedDeck(rsaService);
+		//need to pass in the game hosts public key... the game host 
+		com.waitEncryptedDeck(rsaService, sig, gameHostsPubKey);
 		System.out.println("Got encrypted deck and encrypted again with my key!");
 		
 		//wait for cards
@@ -195,7 +219,7 @@ public class Poker {
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
 		try {
-			gameUser = new User(br.readLine());
+			gameUser = new User(br.readLine(), sig.getPublicKey());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

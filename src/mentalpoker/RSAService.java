@@ -308,9 +308,9 @@ public class RSAService {
 		}
 		encDeck.usersEncrypted.add(usr);
 		for (int i = 0; i < Deck.NUM_CARDS; i++){
-			EncryptedCard tmp = encDeck.encCards.get(i);
+			EncryptedCard tmp = encDeck.data.get(i);
 			tmp.addEncUser(usr);
-			encDeck.encCards.set(i, encryptEncCard(tmp));
+			encDeck.data.set(i, encryptEncCard(tmp));
 		}
 		return encDeck;
 	}
@@ -336,10 +336,10 @@ public class RSAService {
 		for (int i = 0; i < Deck.NUM_CARDS; i++){
 			EncryptedCard tmp = encryptCard(deck.getCardAtIndex(i));
 			tmp.addEncUser(usr);
-			if (i >= encDeck.encCards.size()){
-				encDeck.encCards.add(tmp);
+			if (i >= encDeck.data.size()){
+				encDeck.data.add(tmp);
 			} else {
-				encDeck.encCards.set(i, tmp);
+				encDeck.data.set(i, tmp);
 			}
 
 		}

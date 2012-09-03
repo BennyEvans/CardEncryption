@@ -1,6 +1,7 @@
 package mentalpoker;
 
 import java.math.BigInteger;
+import java.security.PublicKey;
 import java.util.UUID;
 
 /**
@@ -12,13 +13,15 @@ public class User implements java.io.Serializable{
 	private String name;
 	private String id;
 	private BigInteger decryptionKey;
+	private PublicKey pubKey;
 	
 	/**
 	 * Instantiates a new user.
 	 *
 	 * @param name the name of the user
 	 */
-	public User(String name){
+	public User(String name, PublicKey pubKey){
+		this.pubKey = pubKey;
 		this.name = name.toString();
 		this.id = UUID.randomUUID().toString();
 		decryptionKey = null;
@@ -30,7 +33,8 @@ public class User implements java.io.Serializable{
 	 * @param name the name of the user
 	 * @param uuid the uuid of the user
 	 */
-	public User(String name, String uuid){
+	public User(String name, String uuid, PublicKey pubKey){
+		this.pubKey = pubKey;
 		this.name = name.toString();
 		this.id = uuid.toString();
 	}
@@ -63,6 +67,10 @@ public class User implements java.io.Serializable{
 	
 	public boolean hasDecryptionKey(){
 		return !(decryptionKey == null);
+	}
+	
+	public PublicKey getPublicKey(){
+		return pubKey;
 	}
 
 }

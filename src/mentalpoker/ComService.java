@@ -12,6 +12,7 @@ import java.io.ObjectOutputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -28,7 +29,6 @@ import javax.crypto.NoSuchPaddingException;
 
 import org.avis.client.*;
 import org.avis.common.InvalidURIException;
-
 
 
 /**
@@ -51,15 +51,25 @@ public class ComService {
 	/** The current game members. */
 	private ArrayList<User> currentGameMembers = new ArrayList<User>();
 	
+	/** The num responses. */
 	private int numResponses;
 	
 	/** The available games. */
 	private ArrayList<User> availableGames = new ArrayList<User>();
 	
+	/** The pq. */
 	private BigInteger pq[] = null;
 	
-	private EncryptedDeck encryptedDeck;
+	/** The encrypted deck. */
+	private EncryptedDeck encryptedDeck = null;
 	
+	/** The sig serv. */
+	private SigService sigServ;
+	
+	/** The sig public key. */
+	private final byte[] sigPublicKey;
+	
+	/** The not type. */
 	private final String NOT_TYPE = "TYPE";
 	private final String GAME_ID = "GAMEID";
 	private final String ENCRYPT_DECK_REQUEST = "encDReq";
@@ -73,6 +83,7 @@ public class ComService {
 	private final String START_GAME = "startGame";
 	private final String BROADCAST_PQ = "broadcastpq";
 	private final String BROADCAST_PQ_REPLY = "broadcastpqreply";
+	private final String PUB_KEY = "pubkkey";
 	
 	
 	/** The notification handle. */
@@ -114,27 +125,68 @@ public class ComService {
 		return null;
 	}
 	
+	
+	/**
+	 * Byte array to public key.
+	 *
+	 * @param tmp the tmp
+	 * @return the public key
+	 */
+	private PublicKey byteArrayToPublicKey(byte[] tmp) {
+		PublicKey pubK = null;
+		ByteArrayInputStream bis = new ByteArrayInputStream(tmp);
+		ObjectInput in;
+		try{
+			in = new ObjectInputStream(bis);
+			pubK = (PublicKey) in.readObject(); 
+			bis.close();
+			in.close();
+		} catch(Exception e){
+			e.printStackTrace();
+		}
+		return pubK;
+	}
+	
 
 	
 	/**
 	 * Instantiates a new communication service.
 	 *
 	 * @param user the current user
+	 * @param server the server
+	 * @param sigServ the signature service
 	 * @throws ConnectException the connect exception
 	 * @throws InvalidURIException the invalid uri exception
 	 * @throws IllegalArgumentException the illegal argument exception
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-	public ComService(User user, String server) throws ConnectException, InvalidURIException,
+	public ComService(User user, String server, SigService sigServ) throws ConnectException, InvalidURIException,
 			IllegalArgumentException, IOException {
+		this.sigServ = sigServ;
 		this.user = user;
 		notificationHandle = null;
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		ObjectOutput out = null;
+		
+		try {
+			out = new ObjectOutputStream(bos);
+			out.writeObject(this.sigServ.getPublicKey());
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			System.exit(0);
+		}
+		
+		sigPublicKey = bos.toByteArray();
 
 		elvin = new Elvin(server);
 		elvin.closeOnExit();
 	}
 	
 	
+	/**
+	 * Shutdown.
+	 */
 	public void shutdown(){
 		elvin.close();
 	}
@@ -146,9 +198,9 @@ public class ComService {
 	 *
 	 * @param numberOfSlots the number of slots
 	 * @return the list of users in the game
-	 * @throws InterruptedException 
-	 * @throws IOException 
-	 * @throws InvalidSubscriptionException 
+	 * @throws InterruptedException the interrupted exception
+	 * @throws InvalidSubscriptionException the invalid subscription exception
+	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	public ArrayList<User> startNewGame(final int numberOfSlots) throws InterruptedException, InvalidSubscriptionException, IOException {
 		
@@ -173,6 +225,7 @@ public class ComService {
 				gameNotification.set(GAME_ID, gameHost.getID());
 				gameNotification.set("hostUsername", gameHost.getUsername());
 				gameNotification.set(NOT_TYPE, NEW_GAME);
+				gameNotification.set(PUB_KEY, sigPublicKey);
 				
 				elvin.send(gameNotification);
 
@@ -205,9 +258,10 @@ public class ComService {
 					
 					// This means that the notification by the client that they want to join in
 					// must have a field named "playerUsername" with their own username included.
-					User tmpUser = new User(event.notification
-							.getString("playerUsername"), event.notification
-							.getString("playerUUID"));
+					User tmpUser = new User(event.notification.getString("playerUsername"),
+							event.notification.getString("playerUUID"),
+							byteArrayToPublicKey((byte[]) event.notification.get(PUB_KEY))
+							);
 					currentGameMembers.add(tmpUser);
 					String numberOfSlotsLeft = Integer.toString(numberOfSlots - currentGameMembers.size());
 					System.out.println(event.notification.getString("playerUsername")
@@ -235,6 +289,7 @@ public class ComService {
 						not.set(NOT_TYPE, START_GAME);
 						not.set(GAME_ID, gameHost.getID());
 						not.set(GAME_USERS, tmpBytes);
+						
 						try {
 							elvin.send(not);
 						} catch (IOException e) {
@@ -312,9 +367,9 @@ public class ComService {
 	 * Join game off menu.
 	 *
 	 * @return the list of users in the game
-	 * @throws InterruptedException 
-	 * @throws IOException 
-	 * @throws InvalidSubscriptionException 
+	 * @throws InterruptedException the interrupted exception
+	 * @throws InvalidSubscriptionException the invalid subscription exception
+	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSubscriptionException, IOException {
 		
@@ -359,7 +414,8 @@ public class ComService {
 
 				User tmpUser = new User(event.notification
 						.getString("hostUsername"), event.notification
-						.getString(GAME_ID));
+						.getString(GAME_ID),
+						byteArrayToPublicKey((byte[]) event.notification.get(PUB_KEY)));
 				if (findGameHostByID(tmpUser.getID()) == null) {
 					availableGames.add(tmpUser);
 				}
@@ -427,8 +483,10 @@ public class ComService {
 	
 	/**
 	 * Join game.
-	 * @throws IOException 
-	 * @throws InterruptedException 
+	 *
+	 * @return true, if successful
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 * @throws InterruptedException the interrupted exception
 	 */
 	public boolean joinGame() throws IOException, InterruptedException {
 
@@ -495,6 +553,7 @@ public class ComService {
 			joinGameNotificationToHost.set("playerUsername", user.getUsername());
 			joinGameNotificationToHost.set("playerUUID", user.getID());
 			joinGameNotificationToHost.set(NOT_TYPE, JOIN_GAME);
+			joinGameNotificationToHost.set(PUB_KEY, sigPublicKey);
 
 			synchronized (startSub) {
 				//send notification
@@ -520,8 +579,9 @@ public class ComService {
 	 *
 	 * @param p the p
 	 * @param q the q
-	 * @throws InterruptedException 
-	 * @throws IOException 
+	 * @param numUsers the num users
+	 * @throws InterruptedException the interrupted exception
+	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	public void broadcastPQ(final BigInteger p, final BigInteger q, final int numUsers) throws InterruptedException, IOException {
 		
@@ -564,13 +624,13 @@ public class ComService {
 	 * Wait for p and q.
 	 *
 	 * @return p and q
-	 * @throws InterruptedException 
-	 * @throws IOException 
-	 * @throws InvalidSubscriptionException 
-	 * @throws NoSuchProviderException 
-	 * @throws NoSuchPaddingException 
-	 * @throws NoSuchAlgorithmException 
-	 * @throws InvalidKeySpecException 
+	 * @throws InterruptedException the interrupted exception
+	 * @throws InvalidSubscriptionException the invalid subscription exception
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 * @throws InvalidKeySpecException the invalid key spec exception
+	 * @throws NoSuchAlgorithmException the no such algorithm exception
+	 * @throws NoSuchPaddingException the no such padding exception
+	 * @throws NoSuchProviderException the no such provider exception
 	 */
 	public RSAService waitPQ() throws InterruptedException, InvalidSubscriptionException, IOException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException {
 
@@ -618,8 +678,8 @@ public class ComService {
 	 * @param reqUser the user to request from
 	 * @param encDeck the encrypted deck
 	 * @return the new encrypted deck after reqUser has encrypted
-	 * @throws IOException 
-	 * @throws InterruptedException 
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 * @throws InterruptedException the interrupted exception
 	 */
 	public EncryptedDeck requestEncDeck(User reqUser, EncryptedDeck encDeck) throws IOException, InterruptedException {
 
@@ -682,19 +742,27 @@ public class ComService {
 	
 	/**
 	 * Wait for a request to encrypt the deck.
-	 * @throws IOException 
-	 * @throws InterruptedException 
-	 * @throws BadPaddingException 
-	 * @throws IllegalBlockSizeException 
-	 * @throws InvalidKeyException 
+	 *
+	 * @param rsaService the rsa service
+	 * @param sig the signature service
+	 * @param pubKey the Public Key of the game Host
+	 * @return true, if successful
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 * @throws InterruptedException the interrupted exception
+	 * @throws InvalidKeyException the invalid key exception
+	 * @throws IllegalBlockSizeException the illegal block size exception
+	 * @throws BadPaddingException the bad padding exception
+	 * @throws NoSuchAlgorithmException the no such algorithm exception
 	 */
-	public boolean waitEncryptedDeck(RSAService rsaService) throws IOException, InterruptedException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+	public boolean waitEncryptedDeck(RSAService rsaService, final SigService sig, final PublicKey pubKey) throws IOException, InterruptedException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException {
 		Notification not = new Notification();
 		encryptedDeck = null;
 		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REQUEST +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
 		
 		encSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
+				
+					//System.out.println("Got Request!");
 				
 					byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_DECK);
 					
@@ -705,6 +773,11 @@ public class ComService {
 						encryptedDeck = (EncryptedDeck) in.readObject(); 
 						bis.close();
 						in.close();
+						if (!sig.validateSignature(encryptedDeck, pubKey)){
+							//sig failed!
+							callCheat();
+							encryptedDeck = null;
+						}
 					} catch (Exception e1) {
 						e1.printStackTrace();
 					}
@@ -733,7 +806,10 @@ public class ComService {
 		EncryptedDeck encDeck = rsaService.encryptEncDeck(encryptedDeck, user);
 		encDeck.shuffleDeck();
 		
-		//String tmpStr = new String(encDeck.encCards.get(0).cardData);
+		//sign the deck
+		sig.createSignature(encDeck);
+		
+		//String tmpStr = new String(encDeck.data.get(0).cardData);
 		//System.out.println("First Card: " + tmpStr.toString());
 		
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -748,7 +824,6 @@ public class ComService {
 		not.set(REQ_USER, user.getID());
 		not.set(ENCRYPTED_DECK, tmpBytes);
 		
-		
 		elvin.send(not);
 		
 		encSub.remove();
@@ -756,22 +831,56 @@ public class ComService {
 
 	}
 	
-	//sends each user their fully encrypted hand
+
+	/**
+	 * Sends each user their fully encrypted hand.
+	 *
+	 * @param usr the user
+	 * @param hand the hand
+	 */
 	public void sendEncryptedHand(User usr, EncryptedHand hand){
 		return;
 	}
 	
-	//wait to get your fully encrypted hand and decrypt it by requesting from each user
+
+	/**
+	 * Wait to get your fully encrypted hand and decrypt it by requesting from each user.
+	 *
+	 * @return the encrypted hand
+	 */
 	public EncryptedHand waitEncryptedHand(){
 		return null;
 	}
 	
+	
 	//THIS FUNCTION NEEDS TO BE CALLED BEFORE waitEncryptedHand()
 	//asynchronous function - takes requests to decrypt an encrypted hand
+	/**
+	 * Asynchronous function - takes requests to decrypt an encrypted hand
+	 *
+	 * @param rsaService the rsa service
+	 */
 	public void decryptEncryptedHands(RSAService rsaService){
 		//should setup an asynchronous subscription and cancel when 
 		//all we have decrypted all users encrypted hands
 	}
 	
-
+	
+	/**
+	 * Listen for cheat notifications.
+	 */
+	public void listenCheat(){
+		return;
+	}
+	
+	
+	/**
+	 * Call out a cheater by broadcasting a notification.
+	 */
+	public void callCheat(){
+		System.out.println("Cheater Detected!");
+		return;
+	}
+	
+	
 }
