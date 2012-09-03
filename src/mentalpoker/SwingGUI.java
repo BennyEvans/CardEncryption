@@ -47,15 +47,20 @@ public class SwingGUI extends JPanel implements ActionListener {
 	private JPanel joinOrHostPagePanel;
 	private JLabel warning;
 	public HostGameTask hgt;
-	ArrayList<JPanel> userBoxes;
+	ArrayList<JButton> userButtons;
+	ArrayList<JLabel> userLabels;
 	JPanel hostingScreenGridLayout;
-	GridBagConstraints constr;
+	GridBagConstraints hostGameGBConstraints;
+	JPanel hostGamePanel;
+	GridBagConstraints joinGameGBConstraints;
+	JPanel joinGamePanel;
 
 	//Names of the panes
 	final static String usernameInputTitle = "usernameInputPane";
 	final static String joinOrHostTitle = "joinOrHostPane";
 	final static String slotChoiceTitle = "slotChoiceTitle";
 	final static String hostingScreenGridLayoutTitle = "hostingScreenGridLayoutTitle";
+	final static String joinGameScreenTitle = "joinGameScreenTitle";
 
 	public void addComponentToPane(Container pane)
 	{
@@ -134,26 +139,50 @@ public class SwingGUI extends JPanel implements ActionListener {
 		hostingScreenGridLayout = new JPanel(new GridBagLayout());
 		
 		JLabel nowHosting = new JLabel("Now hosting, users will appear in the boxes as they connect");
-		constr = new GridBagConstraints();
-		constr.fill = GridBagConstraints.HORIZONTAL;
-		constr.gridwidth = 3;
-		constr.gridx = 0;
-		constr.gridy = 0;
-		constr.ipadx = 30;
-		constr.ipady = 20;
-		constr.anchor = GridBagConstraints.PAGE_START;
-		hostingScreenGridLayout.add(nowHosting);
+		hostGameGBConstraints = new GridBagConstraints();
+		hostGameGBConstraints.fill = GridBagConstraints.HORIZONTAL;
+		hostGameGBConstraints.ipady = 40;
+		hostGameGBConstraints.gridwidth = 3;
+		hostGameGBConstraints.gridx = 0;
+		hostGameGBConstraints.gridy = 0;
 		
-		userBoxes = new ArrayList<JPanel>();
+		//constr.ipadx = 30;
+		//constr.ipady = 20;
+		hostingScreenGridLayout.add(nowHosting,hostGameGBConstraints);
+		
+		userButtons = new ArrayList<JButton>();
+		//userLabels = new ArrayList<JLabel>();
 		
 		//Create user boxes for people, initially black.
 		for (int i = 0; i < 10; i++)
 		{
-			JPanel temp = new JPanel();
-			temp.setSize(25,25);
-			temp.setBackground(Color.black);
-			userBoxes.add(temp);
+			JButton temp = new JButton();
+			userButtons.add(temp);
 		}
+		
+		/**
+		 * Join game panel, showing available games.
+		 */
+		
+		joinGamePanel = new JPanel(new GridBagLayout());
+		joinGameGBConstraints = new GridBagConstraints();
+		
+		JButton mainMenuButton = new JButton("Back to main menu");
+		mainMenuButton.setActionCommand("backToMainMenu");
+		mainMenuButton.addActionListener(this);
+		joinGameGBConstraints.gridx = 0;
+		joinGameGBConstraints.gridy = 0;
+		joinGamePanel.add(mainMenuButton,joinGameGBConstraints);
+		
+		JLabel joinGameTitle = new JLabel("Available games will appear below");
+		//joinGameGBConstraints.gridwidth = 3;
+		joinGameGBConstraints.gridx = 1;
+		joinGameGBConstraints.gridy = 0;
+		joinGameGBConstraints.weighty = 1; //Move this to the bottom right element when it is added
+		joinGameGBConstraints.weightx = 1; //Move this to the bottom right element when it is added
+		joinGamePanel.add(joinGameTitle, joinGameGBConstraints);
+		
+		
 		
 		
 
@@ -163,6 +192,7 @@ public class SwingGUI extends JPanel implements ActionListener {
 		cards.add(joinOrHostPageOuterLayout,joinOrHostTitle);
 		cards.add(slotChoiceLayout,slotChoiceTitle);
 		cards.add(hostingScreenGridLayout,hostingScreenGridLayoutTitle);
+		cards.add(joinGamePanel,joinGameScreenTitle);
 
 
 		pane.add(cards, BorderLayout.WEST);
@@ -216,39 +246,55 @@ public class SwingGUI extends JPanel implements ActionListener {
 		{
 			CardLayout cl = (CardLayout)(cards.getLayout());
 			cl.show(cards, slotChoiceTitle);
-		} else if ("startGameWithSlots".equals(arg0.getActionCommand()))
+		} else if ("backToMainMenu".equals(arg0.getActionCommand())) {
+			CardLayout cl = (CardLayout)(cards.getLayout());
+			cl.show(cards, joinOrHostTitle);
+		}else if ("startGameWithSlots".equals(arg0.getActionCommand()))
 		{
 			hgt = new HostGameTask();
 			hgt.execute();
 			CardLayout cl = (CardLayout)(cards.getLayout());
 			cl.show(cards, hostingScreenGridLayoutTitle);
+			frame.setSize(700,700);
+			
 			
 			int currentY = 1;
 			int currentX = 0;
 			
-			constr.gridwidth = 25;
-			constr.gridheight = 25;
-			constr.ipadx = 10;
-			constr.ipady = 10;
+			hostGameGBConstraints.gridwidth = 1;
+			hostGameGBConstraints.gridheight = 1;
+
+			
 			System.out.println("Number of i: " + (SwingGUI.numberOfSlots.getSelectedIndex()+1));
 			//Spawn a box for the number of slots available.
-			for (int i = 0; i < (SwingGUI.numberOfSlots.getSelectedIndex()+1); i++)
+			for (int i = 0; i <= (SwingGUI.numberOfSlots.getSelectedIndex()+1); i++)
 			{
-				if (currentX < 3)
+				if (currentX <= 2)
 				{
-					constr.gridx = currentX;
-					constr.gridy = currentY;
+					hostGameGBConstraints.ipadx = 50;
+					hostGameGBConstraints.gridx = currentX;
+					hostGameGBConstraints.gridy = currentY;
 					currentX++;
+					hostGameGBConstraints.fill = GridBagConstraints.HORIZONTAL;
+					userButtons.get(i).setText("EMPTY\n SLOT");
+					hostingScreenGridLayout.add(userButtons.get(i), hostGameGBConstraints);
+					System.out.println(hostGameGBConstraints.gridx + " " + hostGameGBConstraints.gridy);
 				} else {
 					currentX = 0;
 					currentY++;
-					constr.gridx = currentX;
-					constr.gridy = currentY;
+					hostGameGBConstraints.gridx = currentX;
+					hostGameGBConstraints.gridy = currentY;
 				}
-				hostingScreenGridLayout.add(userBoxes.get(i), constr);
+				
+				
 			}
 			
 			
+		} else if ("joinGame".equals(arg0.getActionCommand()))
+		{
+			CardLayout cl = (CardLayout)(cards.getLayout());
+			cl.show(cards, joinGameScreenTitle);
+			frame.setSize(700,700);
 		}
 	}
 
@@ -285,11 +331,37 @@ public class SwingGUI extends JPanel implements ActionListener {
 			} else {
 				String username = splitString[0];
 				numberOfPlayersCurrently++;
-				userBoxes.get(numberOfPlayersCurrently-1).setBackground(Color.green);
-				JLabel usernameLabel = new JLabel();
-				userBoxes.get(numberOfPlayersCurrently-1).add(usernameLabel);
-				usernameLabel.setForeground(Color.red);
+				userButtons.get(numberOfPlayersCurrently-1).setText(username);
+				userButtons.get(numberOfPlayersCurrently-1).setBackground(Color.green);
 			}
+			
+		}
+	}
+	
+	public class JoinGameTask extends SwingWorker<ArrayList<User>, ArrayList<User>> {
+
+		private int numberOfPlayersCurrently = 0;
+		
+		public void publishDelegate(ArrayList<User> availableGames)
+		{
+			this.publish(availableGames);
+		}
+		
+		@Override
+		protected ArrayList<User> doInBackground() throws Exception {
+			SwingGUI.poker.com.joinGameOffMenu(this);
+			return null;
+		}
+
+
+		@Override
+		protected void process(List<ArrayList<User>> listOfAvailableGames) {
+			
+			//We now have a list of all the users hosting available games.
+			ArrayList<User> availableGames = listOfAvailableGames.get(listOfAvailableGames.size()-1);
+			
+			
+			
 			
 		}
 	}

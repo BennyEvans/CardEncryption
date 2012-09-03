@@ -27,6 +27,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
 import mentalpoker.SwingGUI.HostGameTask;
+import mentalpoker.SwingGUI.JoinGameTask;
 
 import org.avis.client.*;
 import org.avis.common.InvalidURIException;
@@ -47,6 +48,7 @@ public class ComService {
 	 */
 	
 	private HostGameTask hgt;
+	private JoinGameTask jgt;
 	
 	/** The game host. */
 	private User gameHost;
@@ -332,8 +334,8 @@ public class ComService {
 	 * @throws IOException 
 	 * @throws InvalidSubscriptionException 
 	 */
-	public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSubscriptionException, IOException {
-		
+	public ArrayList<User> joinGameOffMenu(final JoinGameTask jgt) throws InterruptedException, InvalidSubscriptionException, IOException {
+		this.jgt = jgt;
 		Subscription gameFullSub;
 		Subscription gameAdvertisementSub;
 		/**
@@ -348,9 +350,15 @@ public class ComService {
 
 			private void writeCurrentAvailableGames() {
 				System.out.println("Games available:");
+				
+				//Push availablegames to the joingametask.
+				jgt.publishDelegate(availableGames);
+				
+				
 				Iterator<User> itr = availableGames.iterator();
 				int i = 0;
 				while (itr.hasNext()) {
+					//jgt.publishDelegate(itr.next().getUsername());
 					System.out.println(String.valueOf(i) + " " + itr.next().getUsername());
 					i++;
 				}
