@@ -113,7 +113,7 @@ public class Poker {
 	private void playGameAsHost(ArrayList<User> gameUsers) throws IOException, InterruptedException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
 		EncryptedDeck encDeck = null;
 		RSAService rsaService = new RSAService();
-		EncryptedHand myHand;
+		EncryptedHand myHand = null;
 
 		//broadcast p and q
 		com.broadcastPQ(rsaService.getP(), rsaService.getQ(), gameUsers.size());
@@ -145,6 +145,9 @@ public class Poker {
 		//System.out.println("First Card: " + tmpStr.toString());
 		System.out.println("All Users have encrypted the deck!");
 		
+		//take requests to decrypt a hand
+		com.decryptEncryptedHands(sig, rsaService, gameUsers, gameUsers.size()-1);
+		
 		//choose random cards for each user
 		ArrayList<Integer> chosenCards = new ArrayList<Integer>();
 		Random rnd;
@@ -165,14 +168,35 @@ public class Poker {
 				hand.data.add(encDeck.data.get(tmpInt));
 				count++;
 			}
-			if (!tmpUser.getID().equals(gameUser.getID())){
+			if (tmpUser.getID().equals(gameUser.getID())){
+				System.out.println("Got my cards!");
 				//these are my cards
 				myHand = hand;
 			} else {
+				sig.createSignature(hand);
 				com.sendEncryptedHand(tmpUser, hand);
 			}
 		}
 		
+		System.out.println("Every user has their cards now!");
+		
+		for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
+			User tmpUser = usr.next();
+			if (!tmpUser.getID().equals(gameUser.getID())){
+				sig.createSignature(myHand);
+				myHand = com.requestDecryptHand(myHand, tmpUser, sig);
+			}
+			
+		}
+		
+		Hand hand = rsaService.decyrptHand(myHand);
+		
+		String card1 = Character.toString(hand.cards.get(0).cardType) + "-" + new String(hand.cards.get(0).suit);
+		String card2 = Character.toString(hand.cards.get(1).cardType) + "-" + new String(hand.cards.get(1).suit);
+		System.out.println("My Cards: " + card1 + " " + card2);
+		
+		//sit and block here until everyone has said gameover
+		Thread.sleep(5000);
 		return;
 	}
 	
@@ -183,13 +207,34 @@ public class Poker {
 		
 		PublicKey gameHostsPubKey = gameUsers.get(gameUsers.size()-1).getPublicKey();
 
+		//take requests to decrypt a hand
+		com.decryptEncryptedHands(sig, rsaService, gameUsers, gameUsers.size()-1);
+		
 		//need to pass in the game hosts public key... the game host 
 		com.waitEncryptedDeck(rsaService, sig, gameHostsPubKey);
 		System.out.println("Got encrypted deck and encrypted again with my key!");
 		
 		//wait for cards
-		myHand = com.waitEncryptedHand();
+		myHand = com.waitEncryptedHand(sig, gameHostsPubKey);
 		
+		System.out.println("Got my cards!");
+		
+		for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
+			User tmpUser = usr.next();
+			if (!tmpUser.getID().equals(gameUser.getID())){
+				sig.createSignature(myHand);
+				myHand = com.requestDecryptHand(myHand, tmpUser, sig);
+			}
+			
+		}
+		
+		Hand hand = rsaService.decyrptHand(myHand);
+		String card1 = Character.toString(hand.cards.get(0).cardType) + "-" + new String(hand.cards.get(0).suit);
+		String card2 = Character.toString(hand.cards.get(1).cardType) + "-" + new String(hand.cards.get(1).suit);
+		System.out.println("My Cards: " + card1 + " " + card2);
+		
+		//sit and block here until everyone has said gameover
+		Thread.sleep(5000);
 		return;
 	}
 	

@@ -69,12 +69,17 @@ public class ComService {
 	/** The sig public key. */
 	private final byte[] sigPublicKey;
 	
+	private int decryptionCount;
+	
+	private EncryptedHand encryptedHand;
+	
 	/** The not type. */
 	private final String NOT_TYPE = "TYPE";
 	private final String GAME_ID = "GAMEID";
 	private final String ENCRYPT_DECK_REQUEST = "encDReq";
 	private final String ENCRYPT_DECK_REPLY = "encDRep";
 	private final String ENCRYPTED_DECK = "encDeck";
+	private final String ENCRYPTED_HAND = "encHand";
 	private final String REQ_USER = "userRequested";
 	private final String JOIN_GAME = "newGameResponse";
 	private final String NEW_GAME = "newGame";
@@ -84,6 +89,10 @@ public class ComService {
 	private final String BROADCAST_PQ = "broadcastpq";
 	private final String BROADCAST_PQ_REPLY = "broadcastpqreply";
 	private final String PUB_KEY = "pubkkey";
+	private final String DECRYPT_HAND_REQUEST = "dechandreq";
+	private final String DECRYPT_HAND_REPLY = "dechandrep";
+	private final String SOURCE_USER = "userSource";
+	private final String SEND_ENCRYPTED_HAND = "sendEncHand";
 	
 	
 	/** The notification handle. */
@@ -837,8 +846,29 @@ public class ComService {
 	 *
 	 * @param usr the user
 	 * @param hand the hand
+	 * @throws IOException 
 	 */
-	public void sendEncryptedHand(User usr, EncryptedHand hand){
+	public void sendEncryptedHand(User usr, EncryptedHand hand) throws IOException{
+		Notification not = new Notification();
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		ObjectOutput out = null;
+		out = new ObjectOutputStream(bos);
+		out.writeObject(hand);
+		
+		System.out.println("Sending encrypted hand - " + new String(usr.getID()));
+		
+		byte[] tmpBytes = bos.toByteArray();
+		
+		
+		not.set(NOT_TYPE, SEND_ENCRYPTED_HAND);
+		not.set(GAME_ID, gameHost.getID());
+		not.set(REQ_USER, usr.getID());
+		not.set(ENCRYPTED_HAND, tmpBytes);
+		
+		elvin.send(not);
+		
+		bos.close();
+		out.close();
 		return;
 	}
 	
@@ -847,9 +877,54 @@ public class ComService {
 	 * Wait to get your fully encrypted hand and decrypt it by requesting from each user.
 	 *
 	 * @return the encrypted hand
+	 * @throws IOException 
+	 * @throws InvalidSubscriptionException 
+	 * @throws InterruptedException 
 	 */
-	public EncryptedHand waitEncryptedHand(){
-		return null;
+	public EncryptedHand waitEncryptedHand(final SigService sig, final PublicKey pKey) throws InvalidSubscriptionException, IOException, InterruptedException{
+		final Subscription eSub = elvin.subscribe(NOT_TYPE + " == '" + SEND_ENCRYPTED_HAND +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
+		encryptedHand = null;
+		System.out.println("Waiting for encrypted hand - " + new String(user.getID()));
+		
+		eSub.addListener(new NotificationListener() {
+			public void notificationReceived(NotificationEvent e) {
+				
+					System.out.println("Got waitEncryptedHand request.");
+				
+					byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_HAND);
+					
+					ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
+					ObjectInput in;
+					try {
+						in = new ObjectInputStream(bis);
+						encryptedHand = (EncryptedHand) in.readObject(); 
+						bis.close();
+						in.close();
+						if (!sig.validateSignature(encryptedHand, pKey)){
+							//sig failed!
+							callCheat();
+							encryptedDeck = null;
+						}
+					} catch (Exception e1) {
+						e1.printStackTrace();
+					}
+					
+					//notify the waiting thread that a message has arrived
+					synchronized (eSub) {
+						eSub.notify();
+					}
+
+			}
+		});
+		
+		synchronized (eSub) {
+			//wait until received reply
+			eSub.wait();
+		}
+		
+		eSub.remove();
+		
+		return encryptedHand;
 	}
 	
 	
@@ -859,10 +934,179 @@ public class ComService {
 	 * Asynchronous function - takes requests to decrypt an encrypted hand
 	 *
 	 * @param rsaService the rsa service
+	 * @throws IOException 
+	 * @throws InvalidSubscriptionException 
 	 */
-	public void decryptEncryptedHands(RSAService rsaService){
+	public void decryptEncryptedHands(final SigService sig, final RSAService rsaService, final ArrayList<User> gameUsers, final int numRequests) throws InvalidSubscriptionException, IOException{
 		//should setup an asynchronous subscription and cancel when 
 		//all we have decrypted all users encrypted hands
+		
+		decryptionCount = 0;
+		
+		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + DECRYPT_HAND_REQUEST +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
+		
+		encSub.addListener(new NotificationListener() {
+			public void notificationReceived(NotificationEvent e) {
+				
+				System.out.println("Got decrypt request!");
+				
+					ByteArrayOutputStream bos = new ByteArrayOutputStream();
+					ObjectOutput out = null;
+					EncryptedHand encHand = null;
+					User userRequesting = null;
+					Notification not;
+					
+					System.out.println("Decrypt request!");
+					
+					for (int i = 0; i < gameUsers.size(); i++) {
+						if (gameUsers.get(i).getID().equals(e.notification.getString(SOURCE_USER))) {
+							userRequesting = gameUsers.get(i);
+							break;
+						}
+					}
+					
+					if (userRequesting == null){
+						return;
+					}
+					
+					decryptionCount++;
+					if (decryptionCount > numRequests){
+						try {
+							encSub.remove();
+						} catch (IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+						return;
+					}
+					
+					byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_HAND);
+					
+					ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
+					ObjectInput in;
+					try {
+						in = new ObjectInputStream(bis);
+						encHand = (EncryptedHand) in.readObject(); 
+						bis.close();
+						in.close();
+						if (!sig.validateSignature(encHand, userRequesting.getPublicKey())){
+							//sig failed!
+							callCheat();
+							System.exit(0);
+						}
+						//decrypt and sign
+						encHand = rsaService.decyrptEncHand(encHand);
+						sig.createSignature(encHand);
+						bis.close();
+						in.close();
+					} catch (Exception e1) {
+						e1.printStackTrace();
+						System.exit(0);
+					}
+
+					
+					try {
+						out = new ObjectOutputStream(bos);
+						out.writeObject(encHand);
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					
+					byte[] retBytes = bos.toByteArray();
+					
+					not = new Notification();
+					not.set(NOT_TYPE, DECRYPT_HAND_REPLY);
+					not.set(GAME_ID, gameHost.getID());
+					not.set(REQ_USER, userRequesting.getID());
+					not.set(ENCRYPTED_HAND, retBytes);
+					
+					try {
+						elvin.send(not);
+					} catch (IOException e2) {
+						// TODO Auto-generated catch block
+						e2.printStackTrace();
+					}
+					
+					try {
+						bos.close();
+						out.close();
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					
+			}
+		});
+		
+		return;
+	}
+	
+	
+	public EncryptedHand requestDecryptHand(EncryptedHand encHand, final User usr, final SigService sig) throws InvalidSubscriptionException, IOException, InterruptedException{
+		
+		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + DECRYPT_HAND_REPLY +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
+		Notification not;
+		encryptedHand = null;
+		
+		encSub.addListener(new NotificationListener() {
+			public void notificationReceived(NotificationEvent e) {
+				
+					System.out.println("Got reply from requesting user to decrypt hand!");
+				
+					byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_HAND);
+					
+					ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
+					ObjectInput in;
+					try {
+						in = new ObjectInputStream(bis);
+						encryptedHand = (EncryptedHand) in.readObject(); 
+						bis.close();
+						in.close();
+						if (!sig.validateSignature(encryptedHand, usr.getPublicKey())){
+							//sig failed!
+							callCheat();
+							System.exit(0);
+						}
+						bis.close();
+						in.close();
+					} catch (Exception e1) {
+						e1.printStackTrace();
+						System.exit(0);
+					}
+					
+					synchronized (encSub) {
+						encSub.notify();
+					}
+
+					
+			}
+		});
+		
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		ObjectOutput out = new ObjectOutputStream(bos);
+		out.writeObject(encHand);
+
+		byte[] retBytes = bos.toByteArray();
+		
+		not = new Notification();
+		not.set(NOT_TYPE, DECRYPT_HAND_REQUEST);
+		not.set(GAME_ID, gameHost.getID());
+		not.set(SOURCE_USER, user.getID());
+		not.set(REQ_USER, usr.getID());
+		not.set(ENCRYPTED_HAND, retBytes);
+		
+		synchronized (encSub) {
+			elvin.send(not);
+			//wait until received reply
+			encSub.wait();
+		}
+		
+		bos.close();
+		out.close();
+		encSub.remove();
+		
+		return encryptedHand;
 	}
 	
 	
