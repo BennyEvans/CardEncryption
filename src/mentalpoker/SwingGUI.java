@@ -54,6 +54,8 @@ public class SwingGUI extends JPanel implements ActionListener {
 	JPanel hostGamePanel;
 	GridBagConstraints joinGameGBConstraints;
 	JPanel joinGamePanel;
+	
+	private SigService sig;
 
 	//Names of the panes
 	final static String usernameInputTitle = "usernameInputPane";
@@ -215,7 +217,7 @@ public class SwingGUI extends JPanel implements ActionListener {
 
 	public void usernameAccepted(String username)
 	{
-		Poker.setGameUser(new User(username));
+		Poker.setGameUsername(username);
 
 	}
 

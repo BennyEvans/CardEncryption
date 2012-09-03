@@ -31,7 +31,7 @@ public class Poker {
 	/** The game user. */
 	private static User gameUser;
 	
-	SigService sig;
+	private static SigService sig;
 
 
 	/**
@@ -41,10 +41,9 @@ public class Poker {
 	 */
 	public Poker() throws Exception {
 		
-		sig = new SigService();
-		setUsername();
+		//setUsername();
 		com = new ComService(gameUser, "elvin://elvin.students.itee.uq.edu.au", sig);
-		StartGame();
+		//StartGame();
 		return;
 
 	}
@@ -73,7 +72,7 @@ public class Poker {
 		//send your public key to anyone who requests it
 		//com.acceptPubKeySigRequests(sig.getPublicKey());
 		
-		int menuChoice;
+		int menuChoice = 0;
 		if (menuChoice == MenuOptions.HOST_GAME)
 		{
 			isGameHost = true;
@@ -292,7 +291,13 @@ public class Poker {
     		e.printStackTrace();
     	}
 		System.exit(0);*/
-		
+		try {
+			sig = new SigService();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.exit(0);
+		}
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
             public void run() {
             	
@@ -308,8 +313,8 @@ public class Poker {
 	}
 
 
-	public static void setGameUser(User gameUserl) {
-		gameUser = gameUserl;
+	public static void setGameUsername(String username) {
+		gameUser = new User(username, sig.getPublicKey());
 	}
 	
 }
