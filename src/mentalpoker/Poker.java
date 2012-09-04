@@ -16,8 +16,6 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
-import mentalpoker.SwingGUI.HostGameTask;
-
 import org.avis.client.InvalidSubscriptionException;
 
 /**
@@ -41,9 +39,12 @@ public class Poker {
 	 */
 	public Poker() throws Exception {
 		
-		//setUsername();
+		//com = new ComService(gameUser, "elvin://elvin.students.itee.uq.edu.au", sig);
+		//return;
+
+		setUsername();
 		com = new ComService(gameUser, "elvin://elvin.students.itee.uq.edu.au", sig);
-		//StartGame();
+		StartGame();
 		return;
 
 	}
@@ -64,6 +65,7 @@ public class Poker {
 	 * @throws NoSuchAlgorithmException 
 	 * @throws InvalidKeySpecException 
 	 */
+	/*
 	public ArrayList<User> StartGame(boolean isGameHost, int slots, HostGameTask hgt) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidSubscriptionException, InterruptedException, IOException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
 		//Menu choice becomes the integer chosen by the user.
 		//int menuChoice = MenuOptions.printMainMenu();
@@ -99,6 +101,54 @@ public class Poker {
 		
 		return null;
 	}
+	*/
+	
+	private void StartGame() throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidSubscriptionException, InterruptedException, IOException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
+		//Menu choice becomes the integer chosen by the user.
+		int menuChoice = MenuOptions.printMainMenu();
+		boolean isGameHost = false;
+		ArrayList<User> gameUsers = null;
+		
+		//send your public key to anyone who requests it
+		//com.acceptPubKeySigRequests(sig.getPublicKey());
+		
+		if (menuChoice == MenuOptions.HOST_GAME)
+		{
+			isGameHost = true;
+			gameUsers = com.startNewGame(MenuOptions.startNewGameMenu());
+		} else if (menuChoice == MenuOptions.JOIN_GAME) {
+			isGameHost = false;
+			gameUsers = com.joinGameOffMenu();
+		} else if (menuChoice == Integer.MIN_VALUE)
+		{
+			System.err.println("Sorry, I was unable to recognise what your input as a number. Try numbers, like 1,2,3 etc.");
+			StartGame();
+			return;
+		}
+		
+		if (gameUsers == null){
+			//could call startGame() here but exit is good enough for now
+			com.shutdown();
+			System.exit(1);
+			return;
+		}
+		
+		System.out.println("\nGame Players:");
+		for (int i = 0; i < gameUsers.size(); i++){
+			//System.out.println(gameUsers.get(i).getUsername() + " " + gameUsers.get(i).getID() + new String(gameUsers.get(i).getPublicKey().getEncoded()));
+			System.out.println(gameUsers.get(i).getUsername() + " " + gameUsers.get(i).getID());
+		}
+		System.out.println("");
+		
+
+		if (isGameHost){
+			playGameAsHost(gameUsers);
+		} else {
+			 playGameAsPlayer(gameUsers);
+		}
+		
+		return;
+	}
 	
 	private void playGameAsHost(ArrayList<User> gameUsers) throws IOException, InterruptedException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
 		EncryptedDeck encDeck = null;
@@ -125,7 +175,7 @@ public class Poker {
 				
 				//check the reply was from the user
 				if (!sig.validateSignature(encDeck, tmpUser.getPublicKey())){
-					com.callCheat();
+					com.callCheat(ComService.SIGNATURE_FAILED);
 					com.shutdown();
 					System.exit(2);
 				}
@@ -137,7 +187,7 @@ public class Poker {
 		System.out.println("All Users have encrypted the deck!");
 		
 		//take requests to decrypt a hand
-		com.decryptEncryptedHands(sig, rsaService, gameUsers, gameUsers.size()-1);
+		com.decryptEncryptedHands(rsaService, gameUsers, gameUsers.size()-1);
 		
 		//choose random cards for each user
 		ArrayList<Integer> chosenCards = new ArrayList<Integer>();
@@ -175,7 +225,7 @@ public class Poker {
 			User tmpUser = usr.next();
 			if (!tmpUser.getID().equals(gameUser.getID())){
 				sig.createSignature(myHand);
-				myHand = com.requestDecryptHand(myHand, tmpUser, sig);
+				myHand = com.requestDecryptHand(myHand, tmpUser);
 			}
 			
 		}
@@ -187,7 +237,9 @@ public class Poker {
 		System.out.println("My Cards: " + card1 + " " + card2);
 		
 		//sit and block here until everyone has said gameover
-		Thread.sleep(5000);
+		Thread.sleep(2500);
+		com.stopDecryptingHands();
+		com.shutdown();
 		return;
 	}
 	
@@ -199,14 +251,14 @@ public class Poker {
 		PublicKey gameHostsPubKey = gameUsers.get(gameUsers.size()-1).getPublicKey();
 
 		//take requests to decrypt a hand
-		com.decryptEncryptedHands(sig, rsaService, gameUsers, gameUsers.size()-1);
+		com.decryptEncryptedHands(rsaService, gameUsers, gameUsers.size()-1);
 		
 		//need to pass in the game hosts public key... the game host 
-		com.waitEncryptedDeck(rsaService, sig, gameHostsPubKey);
+		com.waitEncryptedDeck(rsaService, gameHostsPubKey);
 		System.out.println("Got encrypted deck and encrypted again with my key!");
 		
 		//wait for cards
-		myHand = com.waitEncryptedHand(sig, gameHostsPubKey);
+		myHand = com.waitEncryptedHand(gameHostsPubKey);
 		
 		System.out.println("Got my cards!");
 		
@@ -214,7 +266,7 @@ public class Poker {
 			User tmpUser = usr.next();
 			if (!tmpUser.getID().equals(gameUser.getID())){
 				sig.createSignature(myHand);
-				myHand = com.requestDecryptHand(myHand, tmpUser, sig);
+				myHand = com.requestDecryptHand(myHand, tmpUser);
 			}
 			
 		}
@@ -225,7 +277,9 @@ public class Poker {
 		System.out.println("My Cards: " + card1 + " " + card2);
 		
 		//sit and block here until everyone has said gameover
-		Thread.sleep(5000);
+		Thread.sleep(2500);
+		com.stopDecryptingHands();
+		com.shutdown();
 		return;
 	}
 	
@@ -274,13 +328,16 @@ public class Poker {
     	/*
     	 * This stuff is disabled for the moment because it includes its own loops.
     	 */
-		/*try {
+		try {
+		    sig = new SigService();
     		new Poker();
     	} catch (Exception e) {
     		// TODO Auto-generated catch block
     		e.printStackTrace();
     	}
-		System.exit(0);*/
+		System.exit(0);
+		
+		/*
 		try {
 			sig = new SigService();
 		} catch (Exception e) {
@@ -295,6 +352,7 @@ public class Poker {
 
             }
         });
+        */
 	}
 
 

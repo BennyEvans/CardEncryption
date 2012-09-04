@@ -48,6 +48,7 @@ public class ComService {
 	 */
 	
 	private HostGameTask hgt;
+	
 	private JoinGameTask jgt;
 	
 	/** The game host. */
@@ -84,26 +85,34 @@ public class ComService {
 	
 	private EncryptedHand encryptedHand;
 	
+	Subscription decryptSub;
+	
 	/** The not type. */
-	private final String NOT_TYPE = "TYPE";
-	private final String GAME_ID = "GAMEID";
-	private final String ENCRYPT_DECK_REQUEST = "encDReq";
-	private final String ENCRYPT_DECK_REPLY = "encDRep";
-	private final String ENCRYPTED_DECK = "encDeck";
-	private final String ENCRYPTED_HAND = "encHand";
-	private final String REQ_USER = "userRequested";
-	private final String JOIN_GAME = "newGameResponse";
-	private final String NEW_GAME = "newGame";
-	private final String GAME_FULL = "gameFull";
-	private final String GAME_USERS = "gameUsers";
-	private final String START_GAME = "startGame";
-	private final String BROADCAST_PQ = "broadcastpq";
-	private final String BROADCAST_PQ_REPLY = "broadcastpqreply";
-	private final String PUB_KEY = "pubkkey";
-	private final String DECRYPT_HAND_REQUEST = "dechandreq";
-	private final String DECRYPT_HAND_REPLY = "dechandrep";
-	private final String SOURCE_USER = "userSource";
-	private final String SEND_ENCRYPTED_HAND = "sendEncHand";
+	private static final String NOT_TYPE = "TYPE";
+	private static final String GAME_ID = "GAMEID";
+	private static final String ENCRYPT_DECK_REQUEST = "encDReq";
+	private static final String ENCRYPT_DECK_REPLY = "encDRep";
+	private static final String ENCRYPTED_DECK = "encDeck";
+	private static final String ENCRYPTED_HAND = "encHand";
+	private static final String REQ_USER = "userRequested";
+	private static final String JOIN_GAME = "newGameResponse";
+	private static final String NEW_GAME = "newGame";
+	private static final String GAME_FULL = "gameFull";
+	private static final String GAME_USERS = "gameUsers";
+	private static final String START_GAME = "startGame";
+	private static final String BROADCAST_PQ = "broadcastpq";
+	private static final String BROADCAST_PQ_REPLY = "broadcastpqreply";
+	private static final String PUB_KEY = "pubkkey";
+	private static final String DECRYPT_HAND_REQUEST = "dechandreq";
+	private static final String DECRYPT_HAND_REPLY = "dechandrep";
+	private static final String SOURCE_USER = "userSource";
+	private static final String SEND_ENCRYPTED_HAND = "sendEncHand";
+	private static final String CHEATER = "cheater";
+	
+	/** Cheat Reasons */
+	public static final int PUBLIC_KEY_CHANGED = 1;
+	public static final int SIGNATURE_FAILED = 2;
+	public static final int DECRYPT_REQUEST_ABUSE = 3;
 	
 	
 	/** The notification handle. */
@@ -179,9 +188,13 @@ public class ComService {
 	 * @throws InvalidURIException the invalid uri exception
 	 * @throws IllegalArgumentException the illegal argument exception
 	 * @throws IOException Signals that an I/O exception has occurred.
+	 * @throws NoSuchAlgorithmException 
+	 * @throws BadPaddingException 
+	 * @throws IllegalBlockSizeException 
+	 * @throws InvalidKeyException 
 	 */
 	public ComService(User user, String server, SigService sigServ) throws ConnectException, InvalidURIException,
-			IllegalArgumentException, IOException {
+			IllegalArgumentException, IOException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException {
 		this.sigServ = sigServ;
 		this.user = user;
 		notificationHandle = null;
@@ -222,6 +235,7 @@ public class ComService {
 	 * @throws InvalidSubscriptionException the invalid subscription exception
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
+	/*
 	public ArrayList<User> startNewGame(final int numberOfSlots, final HostGameTask hgt) throws InterruptedException, InvalidSubscriptionException, IOException {
 		
 		gameHost = user;
@@ -388,6 +402,166 @@ public class ComService {
 		return tmp;
 
 	}
+	*/
+public ArrayList<User> startNewGame(final int numberOfSlots) throws InterruptedException, InvalidSubscriptionException, IOException {
+		
+		gameHost = user;
+		
+		//notify potential players that there is a game
+		final Runnable notifyPotentialJoiners = new Runnable() {
+			public void run() {
+				if (currentGameMembers.size() >= numberOfSlots) {
+					notificationHandle.cancel(true);
+				} else {
+					try {
+						sendGameNotification();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+
+			private void sendGameNotification() throws IOException {
+				Notification gameNotification = new Notification();
+				gameNotification.set(GAME_ID, gameHost.getID());
+				gameNotification.set("hostUsername", gameHost.getUsername());
+				gameNotification.set(NOT_TYPE, NEW_GAME);
+				gameNotification.set(PUB_KEY, sigPublicKey);
+				
+				elvin.send(gameNotification);
+
+			}
+		};
+		
+		
+		if (user.getUsername() == null) {
+			System.err.println("You cannot have an empty username.");
+			return null;
+		}
+		// Check that there is a sufficient number of slots specified
+		if (numberOfSlots < 1) {
+			System.err.println("You must specify at least one slot available.");
+			return null;
+		}
+
+		// Subscribe to responses bearing my username. This will be useful after we actually advertise the game.
+		gameSub = elvin.subscribe(NOT_TYPE + " == '" + JOIN_GAME +"' && " + GAME_ID + " == '"
+							+ gameHost.getID() + "'");
+
+
+		System.out.println("Now hosting game...");
+
+		//Receive requests to join the game.
+		gameSub.addListener(new NotificationListener() {
+			// This is called if we emile a response requesting to join our game.
+			public void notificationReceived(NotificationEvent event) {
+				if (currentGameMembers.size() < numberOfSlots) {
+					
+					// This means that the notification by the client that they want to join in
+					// must have a field named "playerUsername" with their own username included.
+					User tmpUser = new User(event.notification.getString("playerUsername"),
+							event.notification.getString("playerUUID"),
+							byteArrayToPublicKey((byte[]) event.notification.get(PUB_KEY))
+							);
+					currentGameMembers.add(tmpUser);
+					String numberOfSlotsLeft = Integer.toString(numberOfSlots - currentGameMembers.size());
+					System.out.println(event.notification.getString("playerUsername")
+							+ " connected... " + numberOfSlotsLeft + " slots left.");
+					
+					if (currentGameMembers.size() == numberOfSlots){
+						//send start game notification
+						Notification not = new Notification();
+						UserList ul = new UserList();
+						
+						currentGameMembers.add(user);
+						ul.users = new ArrayList<User>(currentGameMembers);
+						ByteArrayOutputStream bos = new ByteArrayOutputStream();
+						ObjectOutput out = null;
+						try {
+							out = new ObjectOutputStream(bos);
+							out.writeObject(ul);
+						} catch (IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}   
+						
+						byte[] tmpBytes = bos.toByteArray();
+						
+						not.set(NOT_TYPE, START_GAME);
+						not.set(GAME_ID, gameHost.getID());
+						not.set(GAME_USERS, tmpBytes);
+						
+						try {
+							elvin.send(not);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+						
+						try {
+							out.close();
+							bos.close();
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+
+						synchronized (gameSub) {
+							gameSub.notify();
+						}
+					}
+					
+				} else {
+					
+					System.out.println("User attempted to join, but game is full.");
+					Notification gameFullNotification = new Notification();
+					gameFullNotification.set(NOT_TYPE, GAME_FULL);
+					gameFullNotification.set(GAME_ID, gameHost.getID());				
+
+					try {
+						elvin.send(gameFullNotification);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		});
+
+
+		notificationHandle = scheduler.scheduleAtFixedRate(
+				notifyPotentialJoiners, 498, 498, TimeUnit.MILLISECONDS);
+		
+		synchronized (gameSub) {
+			//wait until game is full
+			gameSub.wait();
+		}
+		
+		//cleanup
+		notificationHandle.cancel(true);
+		gameSub.remove();
+		scheduler.shutdown();
+		
+		//sleep for 250ms...
+		//I'm not sure this is necessary but its just a precaution... is Elvin FIFO?
+		//It's here to prevent the next command (send pq) being out of order and received
+		//before the START_GAME notification.
+		Thread.sleep(100);
+		
+		//send game full to other users not in the game
+		Notification gameFullNotification = new Notification();
+		gameFullNotification.set(NOT_TYPE, GAME_FULL);
+		gameFullNotification.set(GAME_ID, gameHost.getID());				
+		elvin.send(gameFullNotification);
+		
+		Thread.sleep(100);
+		
+		System.out.println("Starting Game!");
+
+		ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
+		currentGameMembers = null;
+		availableGames = null;
+		return tmp;
+
+	}
 
 	
 	/**
@@ -398,14 +572,15 @@ public class ComService {
 	 * @throws InvalidSubscriptionException the invalid subscription exception
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
+/*
 	public ArrayList<User> joinGameOffMenu(final JoinGameTask jgt) throws InterruptedException, InvalidSubscriptionException, IOException {
 		this.jgt = jgt;
 		Subscription gameFullSub;
 		Subscription gameAdvertisementSub;
-		/**
-		 * We want to repeatedly clear the screen, and print out the available
-		 * games and a prompt asking which username to connect to.
-		 */
+
+		//We want to repeatedly clear the screen, and print out the available
+		//games and a prompt asking which username to connect to.
+
 		final Runnable checkForAvailableGames = new Runnable() {
 			public void run() {
 				MiscHelper.clearConsole();
@@ -512,6 +687,117 @@ public class ComService {
 		return tmp;
 
 	}
+*/
+
+public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSubscriptionException, IOException {
+	
+	Subscription gameFullSub;
+	Subscription gameAdvertisementSub;
+	/**
+	 * We want to repeatedly clear the screen, and print out the available
+	 * games and a prompt asking which username to connect to.
+	 */
+	final Runnable checkForAvailableGames = new Runnable() {
+		public void run() {
+			MiscHelper.clearConsole();
+			writeCurrentAvailableGames();
+		}
+
+		private void writeCurrentAvailableGames() {
+			System.out.println("Games available:");
+			Iterator<User> itr = availableGames.iterator();
+			int i = 0;
+			while (itr.hasNext()) {
+				System.out.println(String.valueOf(i) + " " + itr.next().getUsername());
+				i++;
+			}
+			System.out.print("Choose a game (enter the number): ");
+
+		}
+	};
+
+	System.out.println("Searching for available games...");
+	availableGames.clear();
+
+	// Subscribe to new game advertisement notifications
+	gameAdvertisementSub = elvin.subscribe(NOT_TYPE + " == '" + NEW_GAME + "'");
+
+	// Subscribe to game full notifications.
+	gameFullSub = elvin.subscribe(NOT_TYPE + " == '" + GAME_FULL + "'");
+
+	// Whenever a game notification is received, add it to the availableGames list if not in there already
+	gameAdvertisementSub.addListener(new NotificationListener() {
+		// This is called if we have a response requesting to join our game.
+		public void notificationReceived(NotificationEvent event) {
+
+			User tmpUser = new User(event.notification
+					.getString("hostUsername"), event.notification
+					.getString(GAME_ID),
+					byteArrayToPublicKey((byte[]) event.notification.get(PUB_KEY)));
+			if (findGameHostByID(tmpUser.getID()) == null) {
+				availableGames.add(tmpUser);
+			}
+		}
+
+	});
+	
+
+	// If a game is reported as full, remove it from the available games list.
+	gameFullSub.addListener(new NotificationListener() {
+		public void notificationReceived(NotificationEvent event) {
+			// may need to change this
+			User tmpUser = findGameHostByID(event.notification.getString(GAME_ID));
+			if (tmpUser != null){
+				availableGames.remove(tmpUser);
+			}
+		}
+
+	});
+
+	
+	BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+
+	notificationHandle = scheduler.scheduleAtFixedRate(
+			checkForAvailableGames, 1000, 3000, TimeUnit.MILLISECONDS);
+
+	
+	// Grab the hoster
+	try {
+		gameHost = availableGames.get(Integer.parseInt(br.readLine()));
+	} catch (NumberFormatException e) {
+		System.err.println("Your input was not a number!");
+		currentGameMembers = null;
+		availableGames = null;
+		scheduler.shutdown();
+		notificationHandle.cancel(true);
+		gameFullSub.remove();
+		gameAdvertisementSub.remove();
+		return null;
+	}
+
+	//cleanup
+	scheduler.shutdown();
+	notificationHandle.cancel(true);
+	gameFullSub.remove();
+	gameAdvertisementSub.remove();
+
+	// At this point, we wish to notify the host that we wish to join their game.
+	if (joinGame()){
+		System.err.println("Error Joining Game.");
+		currentGameMembers = null;
+		availableGames = null;
+		return null;
+	}
+	
+	System.out.println("Joined Game!");
+
+	ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
+	currentGameMembers = null;
+	availableGames = null;
+	return tmp;
+
+}
+
 
 	
 	/**
@@ -564,9 +850,19 @@ public class ComService {
 							currentGameMembers = null;
 						} else {
 							currentGameMembers = ul.users;
-							if (findUserByID(user.getID()) == null){
+							User tmpUser = findUserByID(user.getID());
+							if (tmpUser == null){
 								//wasn't in the game list... maybe we missed out =(
 								currentGameMembers = null;
+							} else {
+								if (!tmpUser.getPublicKey().equals(user.getPublicKey())){
+									//someone has changed your public key... call cheat
+									try {
+										callCheat(PUBLIC_KEY_CHANGED);
+									} catch (Exception e1) {
+										System.exit(-1);
+									}
+								}
 							}
 						}
 
@@ -787,7 +1083,7 @@ public class ComService {
 	 * @throws BadPaddingException the bad padding exception
 	 * @throws NoSuchAlgorithmException the no such algorithm exception
 	 */
-	public boolean waitEncryptedDeck(RSAService rsaService, final SigService sig, final PublicKey pubKey) throws IOException, InterruptedException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException {
+	public boolean waitEncryptedDeck(RSAService rsaService, final PublicKey pubKey) throws IOException, InterruptedException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException {
 		Notification not = new Notification();
 		encryptedDeck = null;
 		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REQUEST +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
@@ -806,9 +1102,9 @@ public class ComService {
 						encryptedDeck = (EncryptedDeck) in.readObject(); 
 						bis.close();
 						in.close();
-						if (!sig.validateSignature(encryptedDeck, pubKey)){
+						if (!sigServ.validateSignature(encryptedDeck, pubKey)){
 							//sig failed!
-							callCheat();
+							callCheat(SIGNATURE_FAILED);
 							encryptedDeck = null;
 						}
 					} catch (Exception e1) {
@@ -840,7 +1136,7 @@ public class ComService {
 		encDeck.shuffleDeck();
 		
 		//sign the deck
-		sig.createSignature(encDeck);
+		sigServ.createSignature(encDeck);
 		
 		//String tmpStr = new String(encDeck.data.get(0).cardData);
 		//System.out.println("First Card: " + tmpStr.toString());
@@ -905,7 +1201,7 @@ public class ComService {
 	 * @throws InvalidSubscriptionException 
 	 * @throws InterruptedException 
 	 */
-	public EncryptedHand waitEncryptedHand(final SigService sig, final PublicKey pKey) throws InvalidSubscriptionException, IOException, InterruptedException{
+	public EncryptedHand waitEncryptedHand(final PublicKey pKey) throws InvalidSubscriptionException, IOException, InterruptedException{
 		final Subscription eSub = elvin.subscribe(NOT_TYPE + " == '" + SEND_ENCRYPTED_HAND +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
 		encryptedHand = null;
 		System.out.println("Waiting for encrypted hand - " + new String(user.getID()));
@@ -924,9 +1220,9 @@ public class ComService {
 						encryptedHand = (EncryptedHand) in.readObject(); 
 						bis.close();
 						in.close();
-						if (!sig.validateSignature(encryptedHand, pKey)){
+						if (!sigServ.validateSignature(encryptedHand, pKey)){
 							//sig failed!
-							callCheat();
+							callCheat(SIGNATURE_FAILED);
 							encryptedDeck = null;
 						}
 					} catch (Exception e1) {
@@ -961,15 +1257,15 @@ public class ComService {
 	 * @throws IOException 
 	 * @throws InvalidSubscriptionException 
 	 */
-	public void decryptEncryptedHands(final SigService sig, final RSAService rsaService, final ArrayList<User> gameUsers, final int numRequests) throws InvalidSubscriptionException, IOException{
+	public void decryptEncryptedHands(final RSAService rsaService, final ArrayList<User> gameUsers, final int numRequests) throws InvalidSubscriptionException, IOException{
 		//should setup an asynchronous subscription and cancel when 
 		//all we have decrypted all users encrypted hands
 		
 		decryptionCount = 0;
 		
-		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + DECRYPT_HAND_REQUEST +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
+		decryptSub = elvin.subscribe(NOT_TYPE + " == '" + DECRYPT_HAND_REQUEST +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
 		
-		encSub.addListener(new NotificationListener() {
+		decryptSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
 				
 				System.out.println("Got decrypt request!");
@@ -995,13 +1291,12 @@ public class ComService {
 					
 					decryptionCount++;
 					if (decryptionCount > numRequests){
+						//more decryption requests than expected... someone is trying to cheat
 						try {
-							encSub.remove();
-						} catch (IOException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
+							callCheat(DECRYPT_REQUEST_ABUSE);
+						} catch (Exception e1) {
+							System.exit(-1);
 						}
-						return;
 					}
 					
 					byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_HAND);
@@ -1013,14 +1308,14 @@ public class ComService {
 						encHand = (EncryptedHand) in.readObject(); 
 						bis.close();
 						in.close();
-						if (!sig.validateSignature(encHand, userRequesting.getPublicKey())){
+						if (!sigServ.validateSignature(encHand, userRequesting.getPublicKey())){
 							//sig failed!
-							callCheat();
+							callCheat(SIGNATURE_FAILED);
 							System.exit(0);
 						}
 						//decrypt and sign
 						encHand = rsaService.decyrptEncHand(encHand);
-						sig.createSignature(encHand);
+						sigServ.createSignature(encHand);
 						bis.close();
 						in.close();
 					} catch (Exception e1) {
@@ -1066,8 +1361,16 @@ public class ComService {
 		return;
 	}
 	
+	public void stopDecryptingHands(){
+		try{
+			decryptSub.remove();
+		} catch (Exception e){
+			//do nothing
+		}
+		decryptSub = null;
+	}
 	
-	public EncryptedHand requestDecryptHand(EncryptedHand encHand, final User usr, final SigService sig) throws InvalidSubscriptionException, IOException, InterruptedException{
+	public EncryptedHand requestDecryptHand(EncryptedHand encHand, final User usr) throws InvalidSubscriptionException, IOException, InterruptedException{
 		
 		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + DECRYPT_HAND_REPLY +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
 		Notification not;
@@ -1087,9 +1390,9 @@ public class ComService {
 						encryptedHand = (EncryptedHand) in.readObject(); 
 						bis.close();
 						in.close();
-						if (!sig.validateSignature(encryptedHand, usr.getPublicKey())){
+						if (!sigServ.validateSignature(encryptedHand, usr.getPublicKey())){
 							//sig failed!
-							callCheat();
+							callCheat(SIGNATURE_FAILED);
 							System.exit(0);
 						}
 						bis.close();
@@ -1138,16 +1441,47 @@ public class ComService {
 	 * Listen for cheat notifications.
 	 */
 	public void listenCheat(){
+		//in here set up a subscription to cheat
+		//if a cheat message is received then check the verification to assure its actually
+		//from a user in this game and not a random spoofing cheat notifications
+		//if its genuine display the reason and exit
 		return;
 	}
 	
 	
 	/**
 	 * Call out a cheater by broadcasting a notification.
+	 * @throws IOException 
+	 * @throws NoSuchAlgorithmException 
+	 * @throws BadPaddingException 
+	 * @throws IllegalBlockSizeException 
+	 * @throws InvalidKeyException 
 	 */
-	public void callCheat(){
+	public void callCheat(int reason) throws IOException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException{
 		System.out.println("Cheater Detected!");
-		return;
+		switch(reason){
+		case PUBLIC_KEY_CHANGED:
+			System.out.println("Reason: Someone has attempted to change your public key!");
+			break;
+		case SIGNATURE_FAILED:
+			System.out.println("Reason: Signature verification has failed - someone may have altered a message!");
+			break;
+		case DECRYPT_REQUEST_ABUSE:
+			System.out.println("Reason: A user has tried to exploit your decryption of other users cards!");
+			break;
+		}
+		
+		Notification not = new Notification();
+		not.set(NOT_TYPE, CHEATER);
+		not.set(GAME_ID, gameHost.getID());
+		not.set(SOURCE_USER, user.getID());
+		not.set("reason", reason);
+		not.set("verification", sigServ.createVerifiedSignature());
+		
+		elvin.send(not);
+		shutdown();
+		System.exit(-1);
+
 	}
 	
 	

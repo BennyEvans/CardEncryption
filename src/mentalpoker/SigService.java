@@ -88,6 +88,20 @@ public class SigService {
         
 	}
 	
+	public byte[] createVerifiedSignature() throws UnsupportedEncodingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException{
+
+	
+		final byte[] data = "verified".getBytes();
+		
+        MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+        messageDigest.update(data);
+        byte[] digest = messageDigest.digest();
+
+        cipher.init(Cipher.ENCRYPT_MODE, key.getPrivate());
+        return cipher.doFinal(digest);
+        
+	}
+	
 	/**
 	 * Validate signature.
 	 *
@@ -143,6 +157,39 @@ public class SigService {
 	        }   
 	        
 	        return true;
+	}
+	
+	public boolean validateVerifiedSignature(final byte[] sig, PublicKey pKey) throws NoSuchAlgorithmException {
+
+		byte[] newd;
+		byte[] ver;
+	
+		final byte[] data = "verified".getBytes();
+		
+		MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+		try {
+			cipher.init(Cipher.DECRYPT_MODE, pKey);
+			newd = cipher.doFinal(sig);
+		} catch (Exception e){
+			return false;
+		}
+
+        messageDigest.update(data);
+        ver = messageDigest.digest();
+
+        //make sure they match
+        if (newd.length > ver.length) {
+            System.out.println("Signature failed!");
+            return false;
+        }
+        for (int i = 0; i < newd.length; ++i) {
+            if (ver[i] != newd[i]) {
+                System.out.println("Signature failed!");
+                return false;
+            }
+        }   
+        
+        return true;
 	}
 	
 	/**
