@@ -88,6 +88,18 @@ public class SigService {
         
 	}
 	
+	public byte[] createSignatureFromByteArray(final byte[] data) throws UnsupportedEncodingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException{
+		
+        MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+        messageDigest.update(data);
+        byte[] digest = messageDigest.digest();
+
+        cipher.init(Cipher.ENCRYPT_MODE, key.getPrivate());
+        return cipher.doFinal(digest);
+        
+	}
+	
+
 	public byte[] createVerifiedSignature() throws UnsupportedEncodingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException{
 
 	
@@ -146,12 +158,10 @@ public class SigService {
 
 	        //make sure they match
 	        if (newd.length > ver.length) {
-                System.out.println("Signature failed!");
                 return false;
 	        }
 	        for (int i = 0; i < newd.length; ++i) {
 	            if (ver[i] != newd[i]) {
-	                System.out.println("Signature failed!");
 	                return false;
 	            }
 	        }   
@@ -179,12 +189,39 @@ public class SigService {
 
         //make sure they match
         if (newd.length > ver.length) {
-            System.out.println("Signature failed!");
             return false;
         }
         for (int i = 0; i < newd.length; ++i) {
             if (ver[i] != newd[i]) {
-                System.out.println("Signature failed!");
+                return false;
+            }
+        }   
+        
+        return true;
+	}
+	
+	public boolean validateSignatureForByteArray(final byte[] sig, final byte[] data, PublicKey pKey) throws NoSuchAlgorithmException {
+
+		byte[] newd;
+		byte[] ver;
+		
+		MessageDigest messageDigest = MessageDigest.getInstance("MD5");
+		try {
+			cipher.init(Cipher.DECRYPT_MODE, pKey);
+			newd = cipher.doFinal(sig);
+		} catch (Exception e){
+			return false;
+		}
+
+        messageDigest.update(data);
+        ver = messageDigest.digest();
+
+        //make sure they match
+        if (newd.length > ver.length) {
+            return false;
+        }
+        for (int i = 0; i < newd.length; ++i) {
+            if (ver[i] != newd[i]) {
                 return false;
             }
         }   

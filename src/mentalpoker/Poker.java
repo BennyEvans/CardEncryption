@@ -187,7 +187,7 @@ public class Poker {
 		System.out.println("All Users have encrypted the deck!");
 		
 		//take requests to decrypt a hand
-		com.decryptEncryptedHands(rsaService, gameUsers, gameUsers.size()-1);
+		com.decryptEncryptedHands(rsaService, gameUsers.size()-1);
 		
 		//choose random cards for each user
 		ArrayList<Integer> chosenCards = new ArrayList<Integer>();
@@ -251,11 +251,11 @@ public class Poker {
 		PublicKey gameHostsPubKey = gameUsers.get(gameUsers.size()-1).getPublicKey();
 
 		//take requests to decrypt a hand
-		com.decryptEncryptedHands(rsaService, gameUsers, gameUsers.size()-1);
+		com.decryptEncryptedHands(rsaService, gameUsers.size()-1);
 		
 		//need to pass in the game hosts public key... the game host 
 		com.waitEncryptedDeck(rsaService, gameHostsPubKey);
-		System.out.println("Got encrypted deck and encrypted again with my key!");
+		System.out.println("Got encrypted deck and encrypted again with my key.");
 		
 		//wait for cards
 		myHand = com.waitEncryptedHand(gameHostsPubKey);

@@ -85,7 +85,8 @@ public class ComService {
 	
 	private EncryptedHand encryptedHand;
 	
-	Subscription decryptSub;
+	private Subscription decryptSub;
+	private Subscription cheaterSub;
 	
 	/** The not type. */
 	private static final String NOT_TYPE = "TYPE";
@@ -108,11 +109,13 @@ public class ComService {
 	private static final String SOURCE_USER = "userSource";
 	private static final String SEND_ENCRYPTED_HAND = "sendEncHand";
 	private static final String CHEATER = "cheater";
+	private static final String SIGNATURE = "signature";
 	
 	/** Cheat Reasons */
 	public static final int PUBLIC_KEY_CHANGED = 1;
 	public static final int SIGNATURE_FAILED = 2;
-	public static final int DECRYPT_REQUEST_ABUSE = 3;
+	public static final int USER_TABLE_SIGNATURE_FAILED = 3;
+	public static final int DECRYPT_REQUEST_ABUSE = 4;
 	
 	
 	/** The notification handle. */
@@ -205,8 +208,7 @@ public class ComService {
 			out = new ObjectOutputStream(bos);
 			out.writeObject(this.sigServ.getPublicKey());
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+			shutdown();
 			System.exit(0);
 		}
 		
@@ -221,6 +223,8 @@ public class ComService {
 	 * Shutdown.
 	 */
 	public void shutdown(){
+		stopDecryptingHands();
+		stopListeningForCheaters();
 		elvin.close();
 	}
 
@@ -481,28 +485,42 @@ public ArrayList<User> startNewGame(final int numberOfSlots) throws InterruptedE
 							out = new ObjectOutputStream(bos);
 							out.writeObject(ul);
 						} catch (IOException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
+							shutdown();
+							System.exit(-2);
 						}   
 						
 						byte[] tmpBytes = bos.toByteArray();
-						
+						try {
+							listenCheat(true);
+						} catch (Exception e2) {
+							shutdown();
+							System.exit(-2);
+						}
 						not.set(NOT_TYPE, START_GAME);
 						not.set(GAME_ID, gameHost.getID());
 						not.set(GAME_USERS, tmpBytes);
+						try {
+							not.set(SIGNATURE, sigServ.createSignatureFromByteArray(tmpBytes));
+						} catch (Exception e1) {
+							shutdown();
+							System.exit(-2);
+						}
+						//user table alter test
+						//tmpBytes[1] = 5;
+						//not.set(GAME_USERS, tmpBytes);
 						
 						try {
 							elvin.send(not);
 						} catch (IOException e) {
-							e.printStackTrace();
+							shutdown();
+							System.exit(-2);
 						}
 						
 						try {
 							out.close();
 							bos.close();
 						} catch (IOException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
+							//do nothing
 						}
 
 						synchronized (gameSub) {
@@ -544,7 +562,7 @@ public ArrayList<User> startNewGame(final int numberOfSlots) throws InterruptedE
 		//I'm not sure this is necessary but its just a precaution... is Elvin FIFO?
 		//It's here to prevent the next command (send pq) being out of order and received
 		//before the START_GAME notification.
-		Thread.sleep(100);
+		Thread.sleep(250);
 		
 		//send game full to other users not in the game
 		Notification gameFullNotification = new Notification();
@@ -552,14 +570,12 @@ public ArrayList<User> startNewGame(final int numberOfSlots) throws InterruptedE
 		gameFullNotification.set(GAME_ID, gameHost.getID());				
 		elvin.send(gameFullNotification);
 		
-		Thread.sleep(100);
+		Thread.sleep(50);
 		
 		System.out.println("Starting Game!");
 
-		ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
-		currentGameMembers = null;
 		availableGames = null;
-		return tmp;
+		return currentGameMembers;
 
 	}
 
@@ -765,7 +781,7 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 	try {
 		gameHost = availableGames.get(Integer.parseInt(br.readLine()));
 	} catch (NumberFormatException e) {
-		System.err.println("Your input was not a number!");
+		System.err.println("Your input was not a number.");
 		currentGameMembers = null;
 		availableGames = null;
 		scheduler.shutdown();
@@ -791,10 +807,8 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 	
 	System.out.println("Joined Game!");
 
-	ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
-	currentGameMembers = null;
 	availableGames = null;
-	return tmp;
+	return currentGameMembers;
 
 }
 
@@ -833,6 +847,17 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 					
 						byte[] tmpBytes = (byte[]) e.notification.get(GAME_USERS);
 						
+						byte[] hostSignature = (byte[]) e.notification.get(SIGNATURE);
+						try {
+							if (!sigServ.validateSignatureForByteArray(hostSignature, tmpBytes, gameHost.getPublicKey())){
+								callCheat(USER_TABLE_SIGNATURE_FAILED);
+							}
+						} catch (Exception e2) {
+							//could not validate signature
+							shutdown();
+							System.exit(-1);
+						}
+						
 						ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
 						ObjectInput in;
 						UserList ul = null;
@@ -842,8 +867,8 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 							bis.close();
 							in.close();
 						} catch (Exception e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
+							shutdown();
+							System.exit(-2);
 						}
 						
 						if (ul == null){
@@ -860,6 +885,7 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 									try {
 										callCheat(PUBLIC_KEY_CHANGED);
 									} catch (Exception e1) {
+										shutdown();
 										System.exit(-1);
 									}
 								}
@@ -891,6 +917,9 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 				//wait until received reply
 				startSub.wait();
 			}
+			
+			//start listening for cheating
+			listenCheat(false);
 
 			startSub.remove();
 			if (currentGameMembers == null){
@@ -1029,8 +1058,8 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 						bis.close();
 						in.close();
 					} catch (Exception e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
+						shutdown();
+						System.exit(-2);
 					}
 					
 					//notify the waiting thread that a message has arrived
@@ -1257,7 +1286,7 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 	 * @throws IOException 
 	 * @throws InvalidSubscriptionException 
 	 */
-	public void decryptEncryptedHands(final RSAService rsaService, final ArrayList<User> gameUsers, final int numRequests) throws InvalidSubscriptionException, IOException{
+	public void decryptEncryptedHands(final RSAService rsaService, final int numRequests) throws InvalidSubscriptionException, IOException{
 		//should setup an asynchronous subscription and cancel when 
 		//all we have decrypted all users encrypted hands
 		
@@ -1268,22 +1297,14 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 		decryptSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
 				
-				System.out.println("Got decrypt request!");
+					System.out.println("Got decrypt request.");
 				
 					ByteArrayOutputStream bos = new ByteArrayOutputStream();
 					ObjectOutput out = null;
 					EncryptedHand encHand = null;
-					User userRequesting = null;
 					Notification not;
 					
-					System.out.println("Decrypt request!");
-					
-					for (int i = 0; i < gameUsers.size(); i++) {
-						if (gameUsers.get(i).getID().equals(e.notification.getString(SOURCE_USER))) {
-							userRequesting = gameUsers.get(i);
-							break;
-						}
-					}
+					User userRequesting = findUserByID(e.notification.getString(SOURCE_USER));
 					
 					if (userRequesting == null){
 						return;
@@ -1295,6 +1316,7 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 						try {
 							callCheat(DECRYPT_REQUEST_ABUSE);
 						} catch (Exception e1) {
+							shutdown();
 							System.exit(-1);
 						}
 					}
@@ -1319,7 +1341,7 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 						bis.close();
 						in.close();
 					} catch (Exception e1) {
-						e1.printStackTrace();
+						shutdown();
 						System.exit(0);
 					}
 
@@ -1328,8 +1350,8 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 						out = new ObjectOutputStream(bos);
 						out.writeObject(encHand);
 					} catch (IOException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
+						shutdown();
+						System.exit(-2);
 					}
 					
 					byte[] retBytes = bos.toByteArray();
@@ -1343,16 +1365,15 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 					try {
 						elvin.send(not);
 					} catch (IOException e2) {
-						// TODO Auto-generated catch block
-						e2.printStackTrace();
+						shutdown();
+						System.exit(-2);
 					}
 					
 					try {
 						bos.close();
 						out.close();
 					} catch (IOException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
+						//do nothing
 					}
 					
 			}
@@ -1379,7 +1400,7 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 		encSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
 				
-					System.out.println("Got reply from requesting user to decrypt hand!");
+					System.out.println("Got reply from requesting user to decrypt hand.");
 				
 					byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_HAND);
 					
@@ -1398,7 +1419,7 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 						bis.close();
 						in.close();
 					} catch (Exception e1) {
-						e1.printStackTrace();
+						shutdown();
 						System.exit(0);
 					}
 					
@@ -1439,13 +1460,70 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 	
 	/**
 	 * Listen for cheat notifications.
+	 * @throws IOException 
+	 * @throws InvalidSubscriptionException 
 	 */
-	public void listenCheat(){
+	public void listenCheat(final boolean isHost) throws InvalidSubscriptionException, IOException{
 		//in here set up a subscription to cheat
 		//if a cheat message is received then check the verification to assure its actually
 		//from a user in this game and not a random spoofing cheat notifications
 		//if its genuine display the reason and exit
+		
+		cheaterSub = elvin.subscribe(NOT_TYPE + " == '" + CHEATER +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
+		
+		cheaterSub.addListener(new NotificationListener() {
+			public void notificationReceived(NotificationEvent e) {
+				
+					String userid = e.notification.getString(SOURCE_USER);
+					
+					if (user.getID().equals(userid)){
+						//ignore your own cheater notifications
+						return;
+					}
+					User tmpUser = findUserByID(userid);
+					
+					if (tmpUser == null){
+						//not in our list so return
+						return;
+					}
+					
+					System.out.println("Got cheater notification!");
+					
+					try {
+						if (sigServ.validateVerifiedSignature((byte[]) e.notification.get(SIGNATURE), tmpUser.getPublicKey())){
+							//signature validated so this is a real cheat notification
+							int reason = e.notification.getInt("reason");
+							if (isHost){
+								System.out.println("Cheater notification was genuine! - Relaying notification!");
+								//wait 1 second and relay the message... people trust you
+								Thread.sleep(1000);
+								callCheat(reason);
+							} else {
+								System.out.println("Cheater Detected - Cheater notification was genuine!");
+							}
+							switch(reason){
+							case PUBLIC_KEY_CHANGED:
+								System.out.println("Reason: Someone has attempted to change a users public key.");
+								break;
+							case SIGNATURE_FAILED:
+								System.out.println("Reason: A user found a signature that failed.");
+								break;
+							case DECRYPT_REQUEST_ABUSE:
+								System.out.println("Reason: A user is trying to exploit the decryption of other users cards.");
+								break;
+							case USER_TABLE_SIGNATURE_FAILED:
+								System.out.println("Reason: The user table sent (with users in the game and their public keys) is reported to be altered. The signature failed.");
+								break;
+							}
+						}
+					} catch (Exception e1) {
+						//do nothing
+					}
+			}
+		});
+		
 		return;
+		
 	}
 	
 	
@@ -1461,13 +1539,16 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 		System.out.println("Cheater Detected!");
 		switch(reason){
 		case PUBLIC_KEY_CHANGED:
-			System.out.println("Reason: Someone has attempted to change your public key!");
+			System.out.println("Reason: Someone has attempted to change your public key.");
 			break;
 		case SIGNATURE_FAILED:
-			System.out.println("Reason: Signature verification has failed - someone may have altered a message!");
+			System.out.println("Reason: Signature verification has failed - someone may have altered a message.");
 			break;
 		case DECRYPT_REQUEST_ABUSE:
-			System.out.println("Reason: A user has tried to exploit your decryption of other users cards!");
+			System.out.println("Reason: A user has tried to exploit your decryption of other users cards.");
+			break;
+		case USER_TABLE_SIGNATURE_FAILED:
+			System.out.println("Reason: The user table sent (with users in the game and their public keys) has been altered. The signature failed.");
 			break;
 		}
 		
@@ -1476,12 +1557,21 @@ public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSub
 		not.set(GAME_ID, gameHost.getID());
 		not.set(SOURCE_USER, user.getID());
 		not.set("reason", reason);
-		not.set("verification", sigServ.createVerifiedSignature());
+		not.set(SIGNATURE, sigServ.createVerifiedSignature());
 		
 		elvin.send(not);
 		shutdown();
 		System.exit(-1);
 
+	}
+	
+	public void stopListeningForCheaters(){
+		try{
+			cheaterSub.remove();
+		} catch (Exception e){
+			//do nothing
+		}
+		cheaterSub = null;
 	}
 	
 	

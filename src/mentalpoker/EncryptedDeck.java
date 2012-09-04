@@ -1,6 +1,5 @@
 package mentalpoker;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -17,14 +16,5 @@ public class EncryptedDeck extends Passable<EncryptedCard> implements java.io.Se
 	public void shuffleDeck(){
 		 Collections.shuffle(data);
 	}
-	
-	// Called at the end of the game
-	public boolean validateDeck(BigInteger p, BigInteger q){
-		//make sure each user has a decryption key
-		//Iterator<User> itr = usersEncrypted.iterator();
-		
-		return false;
-	}
-	
 	
 }
