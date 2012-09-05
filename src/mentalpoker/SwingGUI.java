@@ -20,6 +20,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -57,7 +59,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 	private JPanel joinOrHostPagePanel;
 	private JLabel warning;
 	public HostGameTask hgt;
-	public JoinGameTask jgt;
+	public SearchGamesTask jgt;
 	private ArrayList<JButton> userButtons;
 	private ArrayList<JLabel> userLabels;
 	private JPanel hostingScreenGridLayout;
@@ -229,6 +231,8 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		joinGameGBConstraints.gridwidth = 1;
 		joinGameGBConstraints.gridheight = 1;
 		joinGamePanel.add(joinGameButton, joinGameGBConstraints);
+		joinGameButton.setActionCommand("joinGameFromSearch");
+		joinGameButton.addActionListener(this);
 		
 		cards = new JPanel(new CardLayout());
 		cards.add(usernameInputPaneGridLayout, usernameInputTitle);
@@ -310,7 +314,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			
 			System.out.println("Number of i: " + (SwingGUI.numberOfSlots.getSelectedIndex()+1));
 			//Spawn a box for the number of slots available.
-			for (int i = 0; i <= (SwingGUI.numberOfSlots.getSelectedIndex()+1); i++)
+			for (int i = 0; i <= (SwingGUI.numberOfSlots.getSelectedIndex()); i++)
 			{
 				if (currentX <= 2)
 				{
@@ -327,6 +331,10 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 					currentY++;
 					hostGameGBConstraints.gridx = currentX;
 					hostGameGBConstraints.gridy = currentY;
+					hostGameGBConstraints.fill = GridBagConstraints.HORIZONTAL;
+					userButtons.get(i).setText("EMPTY\n SLOT");
+					hostingScreenGridLayout.add(userButtons.get(i), hostGameGBConstraints);
+					System.out.println(hostGameGBConstraints.gridx + " " + hostGameGBConstraints.gridy);
 				}
 				
 				
@@ -337,9 +345,20 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		{
 			CardLayout cl = (CardLayout)(cards.getLayout());
 			cl.show(cards, joinGameScreenTitle);
-			jgt = new JoinGameTask();
+			jgt = new SearchGamesTask();
 			jgt.execute();
 			frame.setSize(500,450);
+		} else if ("joinGameFromSearch".equals(arg0.getActionCommand()))
+		{
+			System.out.println("join game button pushed?");
+			try {
+				jgt.waitForInstructionsBuffer.put(nameofHosterField.getText());
+			} catch (InterruptedException iex)
+			{
+				jgt.cancel(true);
+				throw new RuntimeException("Unexpected interruption");
+			}
+			
 		}
 	}
 
@@ -383,9 +402,11 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		}
 	}
 	
-	public class JoinGameTask extends SwingWorker<ArrayList<User>, ArrayList<User>> {
+	public class SearchGamesTask extends SwingWorker<ArrayList<User>, ArrayList<User>> {
 
+		public String gameHost = "";
 		private int numberOfPlayersCurrently = 0;
+		public BlockingQueue<String> waitForInstructionsBuffer = new ArrayBlockingQueue<String>(100);
 		
 		public void publishDelegate(ArrayList<User> availableGames)
 		{

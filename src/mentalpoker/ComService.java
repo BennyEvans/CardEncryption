@@ -28,7 +28,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
 import mentalpoker.SwingGUI.HostGameTask;
-import mentalpoker.SwingGUI.JoinGameTask;
+import mentalpoker.SwingGUI.SearchGamesTask;
 
 import org.avis.client.*;
 import org.avis.common.InvalidURIException;
@@ -41,49 +41,52 @@ public class ComService {
 
 	/** The user current. */
 	private User user;
-	
+
 	/**
 	 *  Parent swingworker
 	 *  This is used to call publish() on the parent!!!
 	 */
-	
+
 	private HostGameTask hgt;
-	private JoinGameTask jgt;
-	
+	private SearchGamesTask jgt;
+
 	/** The game host. */
 	private User gameHost;
-	
+
 	/** The elvin service. */
 	private static Elvin elvin;
-	
+
 	/** The game subscription. */
 	private Subscription gameSub;
-	
+
 	/** The current game members. */
 	private ArrayList<User> currentGameMembers = new ArrayList<User>();
-	
+
 	/** The num responses. */
 	private int numResponses;
-	
+
 	/** The available games. */
 	private ArrayList<User> availableGames = new ArrayList<User>();
-	
+
 	/** The pq. */
 	private BigInteger pq[] = null;
-	
+
 	/** The encrypted deck. */
 	private EncryptedDeck encryptedDeck = null;
-	
+
 	/** The sig serv. */
 	private SigService sigServ;
-	
+
 	/** The sig public key. */
 	private final byte[] sigPublicKey;
-	
+
 	private int decryptionCount;
-	
+
 	private EncryptedHand encryptedHand;
-	
+
+	/** Flag for waking up thread **/
+	public boolean continueFlag = false;
+
 	/** The not type. */
 	private final String NOT_TYPE = "TYPE";
 	private final String GAME_ID = "GAMEID";
@@ -104,16 +107,16 @@ public class ComService {
 	private final String DECRYPT_HAND_REPLY = "dechandrep";
 	private final String SOURCE_USER = "userSource";
 	private final String SEND_ENCRYPTED_HAND = "sendEncHand";
-	
-	
+
+
 	/** The notification handle. */
 	ScheduledFuture<?> notificationHandle;
 
 	/** The scheduler. */
 	private final ScheduledExecutorService scheduler = Executors
 			.newScheduledThreadPool(1);
-	
-	
+
+
 	/**
 	 * Find game host by id.
 	 *
@@ -128,7 +131,7 @@ public class ComService {
 		}
 		return null;
 	}
-	
+
 
 	/**
 	 * Find user by id.
@@ -144,8 +147,8 @@ public class ComService {
 		}
 		return null;
 	}
-	
-	
+
+
 	/**
 	 * Byte array to public key.
 	 *
@@ -166,9 +169,9 @@ public class ComService {
 		}
 		return pubK;
 	}
-	
 
-	
+
+
 	/**
 	 * Instantiates a new communication service.
 	 *
@@ -181,13 +184,13 @@ public class ComService {
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	public ComService(User user, String server, SigService sigServ) throws ConnectException, InvalidURIException,
-			IllegalArgumentException, IOException {
+	IllegalArgumentException, IOException {
 		this.sigServ = sigServ;
 		this.user = user;
 		notificationHandle = null;
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		ObjectOutput out = null;
-		
+
 		try {
 			out = new ObjectOutputStream(bos);
 			out.writeObject(this.sigServ.getPublicKey());
@@ -196,14 +199,14 @@ public class ComService {
 			e1.printStackTrace();
 			System.exit(0);
 		}
-		
+
 		sigPublicKey = bos.toByteArray();
 
 		elvin = new Elvin(server);
 		elvin.closeOnExit();
 	}
-	
-	
+
+
 	/**
 	 * Shutdown.
 	 */
@@ -211,7 +214,7 @@ public class ComService {
 		elvin.close();
 	}
 
-	
+
 	/**
 	 * Starts a new game. First creates the subscription to the responses, then
 	 * sends out a new notification of the available game.
@@ -223,11 +226,11 @@ public class ComService {
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	public ArrayList<User> startNewGame(final int numberOfSlots, final HostGameTask hgt) throws InterruptedException, InvalidSubscriptionException, IOException {
-		
+
 		gameHost = user;
 		this.hgt = hgt; //Brings in a copy of the swingworker so that we can publish things.
 		System.out.println("The fucking thing sucks");
-		
+
 		//notify potential players that there is a game
 		final Runnable notifyPotentialJoiners = new Runnable() {
 			public void run() {
@@ -248,13 +251,13 @@ public class ComService {
 				gameNotification.set("hostUsername", gameHost.getUsername());
 				gameNotification.set(NOT_TYPE, NEW_GAME);
 				gameNotification.set(PUB_KEY, sigPublicKey);
-				
+
 				elvin.send(gameNotification);
 
 			}
 		};
-		
-		
+
+
 		if (user.getUsername() == null) {
 			System.err.println("You cannot have an empty username.");
 			return null;
@@ -267,7 +270,7 @@ public class ComService {
 
 		// Subscribe to responses bearing my username. This will be useful after we actually advertise the game.
 		gameSub = elvin.subscribe(NOT_TYPE + " == '" + JOIN_GAME +"' && " + GAME_ID + " == '"
-							+ gameHost.getID() + "'");
+				+ gameHost.getID() + "'");
 
 
 		System.out.println("Now hosting game...");
@@ -278,7 +281,7 @@ public class ComService {
 			// This is called if we emile a response requesting to join our game.
 			public void notificationReceived(NotificationEvent event) {
 				if (currentGameMembers.size() < numberOfSlots) {
-					
+
 					// This means that the notification by the client that they want to join in
 					// must have a field named "playerUsername" with their own username included.
 					User tmpUser = new User(event.notification.getString("playerUsername"),
@@ -289,17 +292,17 @@ public class ComService {
 					String numberOfSlotsLeft = Integer.toString(numberOfSlots - currentGameMembers.size());
 					System.out.println(event.notification.getString("playerUsername")
 							+ " connected... " + numberOfSlotsLeft + " slots left.");
-					
+
 					//Publish to swingworker
 					hgt.publishDelegate(event.notification.getString("playerUsername")
 							+ " connected... " + numberOfSlotsLeft + " slots left.");
-					
-					
+
+
 					if (currentGameMembers.size() == numberOfSlots){
 						//send start game notification
 						Notification not = new Notification();
 						UserList ul = new UserList();
-						
+
 						currentGameMembers.add(user);
 						ul.users = new ArrayList<User>(currentGameMembers);
 						ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -311,19 +314,19 @@ public class ComService {
 							// TODO Auto-generated catch block
 							e1.printStackTrace();
 						}   
-						
+
 						byte[] tmpBytes = bos.toByteArray();
-						
+
 						not.set(NOT_TYPE, START_GAME);
 						not.set(GAME_ID, gameHost.getID());
 						not.set(GAME_USERS, tmpBytes);
-						
+
 						try {
 							elvin.send(not);
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
-						
+
 						try {
 							out.close();
 							bos.close();
@@ -336,9 +339,9 @@ public class ComService {
 							gameSub.notify();
 						}
 					}
-					
+
 				} else {
-					
+
 					System.out.println("User attempted to join, but game is full.");
 					Notification gameFullNotification = new Notification();
 					gameFullNotification.set(NOT_TYPE, GAME_FULL);
@@ -356,31 +359,31 @@ public class ComService {
 
 		notificationHandle = scheduler.scheduleAtFixedRate(
 				notifyPotentialJoiners, 498, 498, TimeUnit.MILLISECONDS);
-		
+
 		synchronized (gameSub) {
 			//wait until game is full
 			gameSub.wait();
 		}
-		
+
 		//cleanup
 		notificationHandle.cancel(true);
 		gameSub.remove();
 		scheduler.shutdown();
-		
+
 		//sleep for 250ms...
 		//I'm not sure this is necessary but its just a precaution... is Elvin FIFO?
 		//It's here to prevent the next command (send pq) being out of order and received
 		//before the START_GAME notification.
 		Thread.sleep(100);
-		
+
 		//send game full to other users not in the game
 		Notification gameFullNotification = new Notification();
 		gameFullNotification.set(NOT_TYPE, GAME_FULL);
 		gameFullNotification.set(GAME_ID, gameHost.getID());				
 		elvin.send(gameFullNotification);
-		
+
 		Thread.sleep(100);
-		
+
 		System.out.println("Starting Game!");
 
 		ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
@@ -390,7 +393,7 @@ public class ComService {
 
 	}
 
-	
+
 	/**
 	 * Join game off menu.
 	 *
@@ -399,7 +402,7 @@ public class ComService {
 	 * @throws InvalidSubscriptionException the invalid subscription exception
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-	public ArrayList<User> joinGameOffMenu(final JoinGameTask jgt) throws InterruptedException, InvalidSubscriptionException, IOException {
+	public ArrayList<User> joinGameOffMenu(final SearchGamesTask jgt) throws InterruptedException, InvalidSubscriptionException, IOException {
 		this.jgt = jgt;
 		Subscription gameFullSub;
 		Subscription gameAdvertisementSub;
@@ -415,25 +418,25 @@ public class ComService {
 			}
 
 			private void writeCurrentAvailableGames() {
-				System.out.println("Games available:");
-				
+				//System.out.println("Games available:");
+
 				//Push availablegames to the joingametask.
 				jgt.publishDelegate(availableGames);
-				
-				
-				Iterator<User> itr = availableGames.iterator();
-				int i = 0;
-				while (itr.hasNext()) {
-					//jgt.publishDelegate(itr.next().getUsername());
-					System.out.println(String.valueOf(i) + " " + itr.next().getUsername());
-					i++;
-				}
-				System.out.print("Choose a game (enter the number): ");
+
+
+				//Iterator<User> itr = availableGames.iterator();
+				//int i = 0;
+				//while (itr.hasNext()) {
+				//jgt.publishDelegate(itr.next().getUsername());
+				//System.out.println(String.valueOf(i) + " " + itr.next().getUsername());
+				//i++;
+				//}
+				//System.out.print("Choose a game (enter the number): ");
 
 			}
 		};
 
-		System.out.println("Searching for available games...");
+		//System.out.println("Searching for available games...");
 		availableGames.clear();
 
 		// Subscribe to new game advertisement notifications
@@ -457,7 +460,7 @@ public class ComService {
 			}
 
 		});
-		
+
 
 		// If a game is reported as full, remove it from the available games list.
 		gameFullSub.addListener(new NotificationListener() {
@@ -471,16 +474,34 @@ public class ComService {
 
 		});
 
-		
-		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+
+		//BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
 		notificationHandle = scheduler.scheduleAtFixedRate(
 				checkForAvailableGames, 1000, 3000, TimeUnit.MILLISECONDS);
 
-		
+
 		// Grab the hoster
 		try {
-			gameHost = availableGames.get(Integer.parseInt(br.readLine()));
+			String gameHostString = jgt.waitForInstructionsBuffer.take();
+			System.out.println("I woke up!");
+			boolean hostFoundAmongstGames = false;
+			for (User usr:availableGames)
+			{
+				if (usr.getUsername().equals(gameHostString))
+				{
+					gameHost = usr;
+					hostFoundAmongstGames = true;
+					break;
+				}
+				if (!hostFoundAmongstGames)
+				{
+					System.err.println("Host not found in available games.");
+				}
+				System.out.println("End of for loop");
+			}
+
+			//gameHost = availableGames.get(Integer.parseInt(br.readLine()));
 		} catch (NumberFormatException e) {
 			System.err.println("Your input was not a number!");
 			currentGameMembers = null;
@@ -498,6 +519,8 @@ public class ComService {
 		gameFullSub.remove();
 		gameAdvertisementSub.remove();
 
+		System.out.println("After cleanup");
+
 		// At this point, we wish to notify the host that we wish to join their game.
 		if (joinGame()){
 			System.err.println("Error Joining Game.");
@@ -505,7 +528,7 @@ public class ComService {
 			availableGames = null;
 			return null;
 		}
-		
+
 		System.out.println("Joined Game!");
 
 		ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
@@ -515,7 +538,7 @@ public class ComService {
 
 	}
 
-	
+
 	/**
 	 * Join game.
 	 *
@@ -538,50 +561,50 @@ public class ComService {
 			System.out.println("Not able to get your ID.");
 			return true;
 		} else {
-			
+
 			Notification joinGameNotificationToHost = new Notification();
-			
+
 			//subscribe to start game notification
 			final Subscription startSub = elvin.subscribe(NOT_TYPE + " == '" + START_GAME +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
 
 			startSub.addListener(new NotificationListener() {
 				public void notificationReceived(NotificationEvent e) {
-					
-						byte[] tmpBytes = (byte[]) e.notification.get(GAME_USERS);
-						
-						ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
-						ObjectInput in;
-						UserList ul = null;
-						try {
-							in = new ObjectInputStream(bis);
-							ul = (UserList) in.readObject(); 
-							bis.close();
-							in.close();
-						} catch (Exception e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
-						
-						if (ul == null){
+
+					byte[] tmpBytes = (byte[]) e.notification.get(GAME_USERS);
+
+					ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
+					ObjectInput in;
+					UserList ul = null;
+					try {
+						in = new ObjectInputStream(bis);
+						ul = (UserList) in.readObject(); 
+						bis.close();
+						in.close();
+					} catch (Exception e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+
+					if (ul == null){
+						currentGameMembers = null;
+					} else {
+						currentGameMembers = ul.users;
+						if (findUserByID(user.getID()) == null){
+							//wasn't in the game list... maybe we missed out =(
 							currentGameMembers = null;
-						} else {
-							currentGameMembers = ul.users;
-							if (findUserByID(user.getID()) == null){
-								//wasn't in the game list... maybe we missed out =(
-								currentGameMembers = null;
-							}
 						}
+					}
 
-						//notify the waiting thread that a message has arrived
-						synchronized (startSub) {
-							startSub.notify();
-						}
+					//notify the waiting thread that a message has arrived
+					synchronized (startSub) {
+						startSub.notify();
+					}
 
-	
+
 
 				}
 			});
-			
+
 			//construct the notification to send
 			joinGameNotificationToHost.set("hostUsername", gameHost.getUsername());
 			joinGameNotificationToHost.set(GAME_ID, gameHost.getID());
@@ -595,6 +618,7 @@ public class ComService {
 				elvin.send(joinGameNotificationToHost);
 
 				//wait until received reply
+				System.out.println("Waiting for subscription");
 				startSub.wait();
 			}
 
@@ -608,7 +632,7 @@ public class ComService {
 
 	}
 
-	
+
 	/**
 	 * Broadcast p and q used for commutative RSA.
 	 *
@@ -619,20 +643,20 @@ public class ComService {
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
 	public void broadcastPQ(final BigInteger p, final BigInteger q, final int numUsers) throws InterruptedException, IOException {
-		
+
 		final Subscription pqSub = elvin.subscribe(NOT_TYPE + " == '" + BROADCAST_PQ_REPLY +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
 		Notification pqnot = new Notification();
 		numResponses = 1;
-		
+
 		pqSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
-				
-					numResponses++;
-					if (numResponses >= numUsers){
-						synchronized (pqSub) {
-							pqSub.notify();
-						}
+
+				numResponses++;
+				if (numResponses >= numUsers){
+					synchronized (pqSub) {
+						pqSub.notify();
 					}
+				}
 			}
 		});
 
@@ -641,20 +665,20 @@ public class ComService {
 		pqnot.set("p", p.toString());
 		pqnot.set("q", q.toString());
 		elvin.send(pqnot);
-		
+
 		synchronized (pqSub) {
 			elvin.send(pqnot);
 			//wait until received reply
 			pqSub.wait();
 		}
-		
+
 		//short sleep before returning
 		Thread.sleep(100);
-		
+
 		return;
 	}
 
-	
+
 	/**
 	 * Wait for p and q.
 	 *
@@ -672,18 +696,18 @@ public class ComService {
 		final Subscription pqSub = elvin.subscribe(NOT_TYPE + " == '" + BROADCAST_PQ +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
 		Notification pqnot = new Notification();
 		RSAService ret;
-		
+
 		pqSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
-				
-					pq = new BigInteger[2];
-					pq[0] = new BigInteger(e.notification.getString("p"));
-					pq[1] = new BigInteger(e.notification.getString("q"));
-					
-					//notify the waiting thread that a message has arrived
-					synchronized (pqSub) {
-						pqSub.notify();
-					}
+
+				pq = new BigInteger[2];
+				pq[0] = new BigInteger(e.notification.getString("p"));
+				pq[1] = new BigInteger(e.notification.getString("q"));
+
+				//notify the waiting thread that a message has arrived
+				synchronized (pqSub) {
+					pqSub.notify();
+				}
 			}
 		});
 
@@ -691,22 +715,22 @@ public class ComService {
 			//wait until received reply
 			pqSub.wait();
 		}
-		
+
 		ret = new RSAService(pq[0], pq[1]);
-		
+
 		System.out.println(pq[0].toString() + "\n" + pq[1].toString());
-		
+
 		pqnot.set(GAME_ID, gameHost.getID());
 		pqnot.set(NOT_TYPE, BROADCAST_PQ_REPLY);
 		elvin.send(pqnot);
-		
+
 		pqSub.remove();
-		
+
 		return ret;
-		
+
 	}
 
-	
+
 	/**
 	 * Request a user to encrypt the deck.
 	 *
@@ -721,40 +745,40 @@ public class ComService {
 		Notification not = new Notification();
 		encryptedDeck = null;
 		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REPLY +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
-		
+
 		encSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
-				
-					byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_DECK);
-					
-					ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
-					ObjectInput in;
-					try {
-						in = new ObjectInputStream(bis);
-						encryptedDeck = (EncryptedDeck) in.readObject(); 
-						bis.close();
-						in.close();
-					} catch (Exception e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-					
-					//notify the waiting thread that a message has arrived
-					synchronized (encSub) {
-						encSub.notify();
-					}
+
+				byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_DECK);
+
+				ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
+				ObjectInput in;
+				try {
+					in = new ObjectInputStream(bis);
+					encryptedDeck = (EncryptedDeck) in.readObject(); 
+					bis.close();
+					in.close();
+				} catch (Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+
+				//notify the waiting thread that a message has arrived
+				synchronized (encSub) {
+					encSub.notify();
+				}
 
 			}
 		});
-		
+
 		//construct the notification to send
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		ObjectOutput out = null;
 		out = new ObjectOutputStream(bos);
 		out.writeObject(encDeck);
-		
+
 		byte[] tmpBytes = bos.toByteArray();
-		
+
 		not.set(NOT_TYPE, ENCRYPT_DECK_REQUEST);
 		not.set(GAME_ID, gameHost.getID());
 		not.set(REQ_USER, reqUser.getID());
@@ -768,13 +792,13 @@ public class ComService {
 			//wait until received reply
 			encSub.wait();
 		}
-		
+
 		encSub.remove();
 
 		return encryptedDeck;
 	}
 
-	
+
 	/**
 	 * Wait for a request to encrypt the deck.
 	 *
@@ -793,79 +817,79 @@ public class ComService {
 		Notification not = new Notification();
 		encryptedDeck = null;
 		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + ENCRYPT_DECK_REQUEST +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
-		
+
 		encSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
-				
-					//System.out.println("Got Request!");
-				
-					byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_DECK);
-					
-					ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
-					ObjectInput in;
-					try {
-						in = new ObjectInputStream(bis);
-						encryptedDeck = (EncryptedDeck) in.readObject(); 
-						bis.close();
-						in.close();
-						if (!sig.validateSignature(encryptedDeck, pubKey)){
-							//sig failed!
-							callCheat();
-							encryptedDeck = null;
-						}
-					} catch (Exception e1) {
-						e1.printStackTrace();
+
+				//System.out.println("Got Request!");
+
+				byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_DECK);
+
+				ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
+				ObjectInput in;
+				try {
+					in = new ObjectInputStream(bis);
+					encryptedDeck = (EncryptedDeck) in.readObject(); 
+					bis.close();
+					in.close();
+					if (!sig.validateSignature(encryptedDeck, pubKey)){
+						//sig failed!
+						callCheat();
+						encryptedDeck = null;
 					}
-					
-					//notify the waiting thread that a message has arrived
-					synchronized (encSub) {
-						encSub.notify();
-					}
+				} catch (Exception e1) {
+					e1.printStackTrace();
+				}
+
+				//notify the waiting thread that a message has arrived
+				synchronized (encSub) {
+					encSub.notify();
+				}
 
 			}
 		});
-		
+
 		synchronized (encSub) {
 			//wait until received reply
 			encSub.wait();
 		}
-		
-		
+
+
 		//construct the notification to send
 		if (encryptedDeck == null){
 			encSub.remove();
 			return false;
 		}
-		
+
 		//encrypt and shuffle the deck
 		EncryptedDeck encDeck = rsaService.encryptEncDeck(encryptedDeck, user);
 		encDeck.shuffleDeck();
-		
+
 		//sign the deck
 		sig.createSignature(encDeck);
-		
+
 		//String tmpStr = new String(encDeck.data.get(0).cardData);
 		//System.out.println("First Card: " + tmpStr.toString());
-		
+
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		ObjectOutput out = null;
 		out = new ObjectOutputStream(bos);
 		out.writeObject(encDeck);
-		
+
 		byte[] tmpBytes = bos.toByteArray();
-		
+
 		not.set(NOT_TYPE, ENCRYPT_DECK_REPLY);
 		not.set(GAME_ID, gameHost.getID());
 		not.set(REQ_USER, user.getID());
 		not.set(ENCRYPTED_DECK, tmpBytes);
-		
+
 		elvin.send(not);
-		
+
 		encSub.remove();
 		return true;
 
 	}
-	
+
 
 	/**
 	 * Sends each user their fully encrypted hand.
@@ -880,24 +904,24 @@ public class ComService {
 		ObjectOutput out = null;
 		out = new ObjectOutputStream(bos);
 		out.writeObject(hand);
-		
+
 		System.out.println("Sending encrypted hand - " + new String(usr.getID()));
-		
+
 		byte[] tmpBytes = bos.toByteArray();
-		
-		
+
+
 		not.set(NOT_TYPE, SEND_ENCRYPTED_HAND);
 		not.set(GAME_ID, gameHost.getID());
 		not.set(REQ_USER, usr.getID());
 		not.set(ENCRYPTED_HAND, tmpBytes);
-		
+
 		elvin.send(not);
-		
+
 		bos.close();
 		out.close();
 		return;
 	}
-	
+
 
 	/**
 	 * Wait to get your fully encrypted hand and decrypt it by requesting from each user.
@@ -911,49 +935,49 @@ public class ComService {
 		final Subscription eSub = elvin.subscribe(NOT_TYPE + " == '" + SEND_ENCRYPTED_HAND +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
 		encryptedHand = null;
 		System.out.println("Waiting for encrypted hand - " + new String(user.getID()));
-		
+
 		eSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
-				
-					System.out.println("Got waitEncryptedHand request.");
-				
-					byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_HAND);
-					
-					ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
-					ObjectInput in;
-					try {
-						in = new ObjectInputStream(bis);
-						encryptedHand = (EncryptedHand) in.readObject(); 
-						bis.close();
-						in.close();
-						if (!sig.validateSignature(encryptedHand, pKey)){
-							//sig failed!
-							callCheat();
-							encryptedDeck = null;
-						}
-					} catch (Exception e1) {
-						e1.printStackTrace();
+
+				System.out.println("Got waitEncryptedHand request.");
+
+				byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_HAND);
+
+				ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
+				ObjectInput in;
+				try {
+					in = new ObjectInputStream(bis);
+					encryptedHand = (EncryptedHand) in.readObject(); 
+					bis.close();
+					in.close();
+					if (!sig.validateSignature(encryptedHand, pKey)){
+						//sig failed!
+						callCheat();
+						encryptedDeck = null;
 					}
-					
-					//notify the waiting thread that a message has arrived
-					synchronized (eSub) {
-						eSub.notify();
-					}
+				} catch (Exception e1) {
+					e1.printStackTrace();
+				}
+
+				//notify the waiting thread that a message has arrived
+				synchronized (eSub) {
+					eSub.notify();
+				}
 
 			}
 		});
-		
+
 		synchronized (eSub) {
 			//wait until received reply
 			eSub.wait();
 		}
-		
+
 		eSub.remove();
-		
+
 		return encryptedHand;
 	}
-	
-	
+
+
 	//THIS FUNCTION NEEDS TO BE CALLED BEFORE waitEncryptedHand()
 	//asynchronous function - takes requests to decrypt an encrypted hand
 	/**
@@ -966,184 +990,184 @@ public class ComService {
 	public void decryptEncryptedHands(final SigService sig, final RSAService rsaService, final ArrayList<User> gameUsers, final int numRequests) throws InvalidSubscriptionException, IOException{
 		//should setup an asynchronous subscription and cancel when 
 		//all we have decrypted all users encrypted hands
-		
+
 		decryptionCount = 0;
-		
+
 		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + DECRYPT_HAND_REQUEST +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
-		
+
 		encSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
-				
+
 				System.out.println("Got decrypt request!");
-				
-					ByteArrayOutputStream bos = new ByteArrayOutputStream();
-					ObjectOutput out = null;
-					EncryptedHand encHand = null;
-					User userRequesting = null;
-					Notification not;
-					
-					System.out.println("Decrypt request!");
-					
-					for (int i = 0; i < gameUsers.size(); i++) {
-						if (gameUsers.get(i).getID().equals(e.notification.getString(SOURCE_USER))) {
-							userRequesting = gameUsers.get(i);
-							break;
-						}
+
+				ByteArrayOutputStream bos = new ByteArrayOutputStream();
+				ObjectOutput out = null;
+				EncryptedHand encHand = null;
+				User userRequesting = null;
+				Notification not;
+
+				System.out.println("Decrypt request!");
+
+				for (int i = 0; i < gameUsers.size(); i++) {
+					if (gameUsers.get(i).getID().equals(e.notification.getString(SOURCE_USER))) {
+						userRequesting = gameUsers.get(i);
+						break;
 					}
-					
-					if (userRequesting == null){
-						return;
-					}
-					
-					decryptionCount++;
-					if (decryptionCount > numRequests){
-						try {
-							encSub.remove();
-						} catch (IOException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
-						return;
-					}
-					
-					byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_HAND);
-					
-					ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
-					ObjectInput in;
+				}
+
+				if (userRequesting == null){
+					return;
+				}
+
+				decryptionCount++;
+				if (decryptionCount > numRequests){
 					try {
-						in = new ObjectInputStream(bis);
-						encHand = (EncryptedHand) in.readObject(); 
-						bis.close();
-						in.close();
-						if (!sig.validateSignature(encHand, userRequesting.getPublicKey())){
-							//sig failed!
-							callCheat();
-							System.exit(0);
-						}
-						//decrypt and sign
-						encHand = rsaService.decyrptEncHand(encHand);
-						sig.createSignature(encHand);
-						bis.close();
-						in.close();
-					} catch (Exception e1) {
+						encSub.remove();
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
 						e1.printStackTrace();
+					}
+					return;
+				}
+
+				byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_HAND);
+
+				ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
+				ObjectInput in;
+				try {
+					in = new ObjectInputStream(bis);
+					encHand = (EncryptedHand) in.readObject(); 
+					bis.close();
+					in.close();
+					if (!sig.validateSignature(encHand, userRequesting.getPublicKey())){
+						//sig failed!
+						callCheat();
 						System.exit(0);
 					}
+					//decrypt and sign
+					encHand = rsaService.decyrptEncHand(encHand);
+					sig.createSignature(encHand);
+					bis.close();
+					in.close();
+				} catch (Exception e1) {
+					e1.printStackTrace();
+					System.exit(0);
+				}
 
-					
-					try {
-						out = new ObjectOutputStream(bos);
-						out.writeObject(encHand);
-					} catch (IOException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-					
-					byte[] retBytes = bos.toByteArray();
-					
-					not = new Notification();
-					not.set(NOT_TYPE, DECRYPT_HAND_REPLY);
-					not.set(GAME_ID, gameHost.getID());
-					not.set(REQ_USER, userRequesting.getID());
-					not.set(ENCRYPTED_HAND, retBytes);
-					
-					try {
-						elvin.send(not);
-					} catch (IOException e2) {
-						// TODO Auto-generated catch block
-						e2.printStackTrace();
-					}
-					
-					try {
-						bos.close();
-						out.close();
-					} catch (IOException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-					
+
+				try {
+					out = new ObjectOutputStream(bos);
+					out.writeObject(encHand);
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+
+				byte[] retBytes = bos.toByteArray();
+
+				not = new Notification();
+				not.set(NOT_TYPE, DECRYPT_HAND_REPLY);
+				not.set(GAME_ID, gameHost.getID());
+				not.set(REQ_USER, userRequesting.getID());
+				not.set(ENCRYPTED_HAND, retBytes);
+
+				try {
+					elvin.send(not);
+				} catch (IOException e2) {
+					// TODO Auto-generated catch block
+					e2.printStackTrace();
+				}
+
+				try {
+					bos.close();
+					out.close();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+
 			}
 		});
-		
+
 		return;
 	}
-	
-	
+
+
 	public EncryptedHand requestDecryptHand(EncryptedHand encHand, final User usr, final SigService sig) throws InvalidSubscriptionException, IOException, InterruptedException{
-		
+
 		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + DECRYPT_HAND_REPLY +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
 		Notification not;
 		encryptedHand = null;
-		
+
 		encSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
-				
-					System.out.println("Got reply from requesting user to decrypt hand!");
-				
-					byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_HAND);
-					
-					ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
-					ObjectInput in;
-					try {
-						in = new ObjectInputStream(bis);
-						encryptedHand = (EncryptedHand) in.readObject(); 
-						bis.close();
-						in.close();
-						if (!sig.validateSignature(encryptedHand, usr.getPublicKey())){
-							//sig failed!
-							callCheat();
-							System.exit(0);
-						}
-						bis.close();
-						in.close();
-					} catch (Exception e1) {
-						e1.printStackTrace();
+
+				System.out.println("Got reply from requesting user to decrypt hand!");
+
+				byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_HAND);
+
+				ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
+				ObjectInput in;
+				try {
+					in = new ObjectInputStream(bis);
+					encryptedHand = (EncryptedHand) in.readObject(); 
+					bis.close();
+					in.close();
+					if (!sig.validateSignature(encryptedHand, usr.getPublicKey())){
+						//sig failed!
+						callCheat();
 						System.exit(0);
 					}
-					
-					synchronized (encSub) {
-						encSub.notify();
-					}
+					bis.close();
+					in.close();
+				} catch (Exception e1) {
+					e1.printStackTrace();
+					System.exit(0);
+				}
 
-					
+				synchronized (encSub) {
+					encSub.notify();
+				}
+
+
 			}
 		});
-		
+
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		ObjectOutput out = new ObjectOutputStream(bos);
 		out.writeObject(encHand);
 
 		byte[] retBytes = bos.toByteArray();
-		
+
 		not = new Notification();
 		not.set(NOT_TYPE, DECRYPT_HAND_REQUEST);
 		not.set(GAME_ID, gameHost.getID());
 		not.set(SOURCE_USER, user.getID());
 		not.set(REQ_USER, usr.getID());
 		not.set(ENCRYPTED_HAND, retBytes);
-		
+
 		synchronized (encSub) {
 			elvin.send(not);
 			//wait until received reply
 			encSub.wait();
 		}
-		
+
 		bos.close();
 		out.close();
 		encSub.remove();
-		
+
 		return encryptedHand;
 	}
-	
-	
+
+
 	/**
 	 * Listen for cheat notifications.
 	 */
 	public void listenCheat(){
 		return;
 	}
-	
-	
+
+
 	/**
 	 * Call out a cheater by broadcasting a notification.
 	 */
@@ -1151,6 +1175,6 @@ public class ComService {
 		System.out.println("Cheater Detected!");
 		return;
 	}
-	
-	
+
+
 }
