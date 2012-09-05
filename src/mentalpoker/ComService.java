@@ -226,6 +226,7 @@ public class ComService {
 		
 		gameHost = user;
 		this.hgt = hgt; //Brings in a copy of the swingworker so that we can publish things.
+		System.out.println("The fucking thing sucks");
 		
 		//notify potential players that there is a game
 		final Runnable notifyPotentialJoiners = new Runnable() {
@@ -402,6 +403,7 @@ public class ComService {
 		this.jgt = jgt;
 		Subscription gameFullSub;
 		Subscription gameAdvertisementSub;
+		System.out.println("JoingameOffMenu called");
 		/**
 		 * We want to repeatedly clear the screen, and print out the available
 		 * games and a prompt asking which username to connect to.

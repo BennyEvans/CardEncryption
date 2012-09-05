@@ -68,12 +68,14 @@ public class Poker {
 		//Menu choice becomes the integer chosen by the user.
 		//int menuChoice = MenuOptions.printMainMenu();
 		ArrayList<User> gameUsers = null;
-		
+		System.out.println("StartGame called" + isGameHost);
 		//send your public key to anyone who requests it
 		//com.acceptPubKeySigRequests(sig.getPublicKey());
 		if (isGameHost)
 		{
-			gameUsers = com.startNewGame(MenuOptions.startNewGameMenu(), hgt);
+			System.out.println("Before");
+			gameUsers = com.startNewGame(slots, hgt);
+			System.out.println("After");
 		}
 		
 		if (gameUsers == null){

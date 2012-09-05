@@ -16,25 +16,35 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.swing.BoxLayout;
+import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 
 import org.avis.client.InvalidSubscriptionException;
 
-public class SwingGUI extends JPanel implements ActionListener {
+public class SwingGUI extends JPanel implements ActionListener, ListSelectionListener {
+
+	private static final long serialVersionUID = -3047811815984570792L;
 	JPanel cards;
 	protected JTextField usernameField;
 	protected JButton startButton;
@@ -47,13 +57,18 @@ public class SwingGUI extends JPanel implements ActionListener {
 	private JPanel joinOrHostPagePanel;
 	private JLabel warning;
 	public HostGameTask hgt;
-	ArrayList<JButton> userButtons;
-	ArrayList<JLabel> userLabels;
-	JPanel hostingScreenGridLayout;
-	GridBagConstraints hostGameGBConstraints;
-	JPanel hostGamePanel;
-	GridBagConstraints joinGameGBConstraints;
-	JPanel joinGamePanel;
+	public JoinGameTask jgt;
+	private ArrayList<JButton> userButtons;
+	private ArrayList<JLabel> userLabels;
+	private JPanel hostingScreenGridLayout;
+	private GridBagConstraints hostGameGBConstraints;
+	private JPanel hostGamePanel;
+	private GridBagConstraints joinGameGBConstraints;
+	private JPanel joinGamePanel;
+	private Set gameHosters;
+	private DefaultListModel listModel;
+	private JList gamesList;
+	private JTextField nameofHosterField;
 	
 	private SigService sig;
 
@@ -184,11 +199,37 @@ public class SwingGUI extends JPanel implements ActionListener {
 		joinGameGBConstraints.weightx = 1; //Move this to the bottom right element when it is added
 		joinGamePanel.add(joinGameTitle, joinGameGBConstraints);
 		
+		//! Set up the list
 		
+		joinGameGBConstraints.gridwidth = 4;
+		joinGameGBConstraints.ipadx = 400;
+		joinGameGBConstraints.anchor = GridBagConstraints.NORTHWEST;
+		joinGameGBConstraints.gridx = 0;
+		joinGameGBConstraints.gridy = 1;
+		joinGameGBConstraints.gridheight = 1;
+		listModel = new DefaultListModel();
+		listModel.addElement("testingHost"); //DEBUG
+		listModel.addElement("testingHost2"); //DEBUG
+		gamesList = new JList(listModel);
+		gamesList.addListSelectionListener(this);
+		JScrollPane scrollPane = new JScrollPane(gamesList);
+		joinGamePanel.add(scrollPane, joinGameGBConstraints);
 		
+		nameofHosterField = new JTextField();
+		JButton joinGameButton = new JButton("Join game");
+		joinGameGBConstraints.gridx = 0;
+		joinGameGBConstraints.ipadx = 300;
+		joinGameGBConstraints.gridy = 2;
+		joinGameGBConstraints.gridwidth = 2;
+		joinGameGBConstraints.gridheight = 1;
+		joinGamePanel.add(nameofHosterField, joinGameGBConstraints);
+		joinGameGBConstraints.gridx = 2;
+		joinGameGBConstraints.ipadx = 0;
+		joinGameGBConstraints.gridy = 2;
+		joinGameGBConstraints.gridwidth = 1;
+		joinGameGBConstraints.gridheight = 1;
+		joinGamePanel.add(joinGameButton, joinGameGBConstraints);
 		
-
-
 		cards = new JPanel(new CardLayout());
 		cards.add(usernameInputPaneGridLayout, usernameInputTitle);
 		cards.add(joinOrHostPageOuterLayout,joinOrHostTitle);
@@ -296,7 +337,9 @@ public class SwingGUI extends JPanel implements ActionListener {
 		{
 			CardLayout cl = (CardLayout)(cards.getLayout());
 			cl.show(cards, joinGameScreenTitle);
-			frame.setSize(700,700);
+			jgt = new JoinGameTask();
+			jgt.execute();
+			frame.setSize(500,450);
 		}
 	}
 
@@ -351,21 +394,46 @@ public class SwingGUI extends JPanel implements ActionListener {
 		
 		@Override
 		protected ArrayList<User> doInBackground() throws Exception {
-			SwingGUI.poker.com.joinGameOffMenu(this);
-			return null;
+			ArrayList<User> userListLocal = SwingGUI.poker.com.joinGameOffMenu(this);
+			
+			return userListLocal;
 		}
 
 
 		@Override
 		protected void process(List<ArrayList<User>> listOfAvailableGames) {
-			
+			//System.out.println("Process called");
 			//We now have a list of all the users hosting available games.
 			ArrayList<User> availableGames = listOfAvailableGames.get(listOfAvailableGames.size()-1);
+			
+			listModel.clear();
+			
+			for (User usr:availableGames)
+			{
+				listModel.addElement(usr.getUsername());
+			}
 			
 			
 			
 			
 		}
+	}
+
+	@Override
+	/**
+	 * This listener updates the value of the textbox with the game host's name
+	 * when they are selected in the list.
+	 */
+	public void valueChanged(ListSelectionEvent event) {
+		if (event.getSource() == gamesList && !event.getValueIsAdjusting())
+		{
+			String nameOfGameHost = (String)gamesList.getSelectedValue();
+			if (nameOfGameHost != null)
+			{
+				nameofHosterField.setText(nameOfGameHost);
+			}
+		}
+		
 	}
 
 
