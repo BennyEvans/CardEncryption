@@ -374,7 +374,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		@Override
 		protected ArrayList<User> doInBackground() throws Exception {
 			try {
-				SwingGUI.poker.StartGame(true,(SwingGUI.numberOfSlots.getSelectedIndex()+1),this);
+				//SwingGUI.poker.StartGame(true,(SwingGUI.numberOfSlots.getSelectedIndex()+1),this);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
