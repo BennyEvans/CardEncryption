@@ -260,12 +260,6 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		frame.setVisible(true);
 	}
 
-	public void usernameAccepted(String username)
-	{
-		Poker.setGameUsername(username);
-
-	}
-
 
 	@Override
 	public void actionPerformed(ActionEvent arg0) {
@@ -274,11 +268,11 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			String username = usernameField.getText();
 			if (!username.equals(""))
 			{
-				usernameAccepted(username);
+				//usernameAccepted(username);
 				CardLayout cl = (CardLayout)(cards.getLayout());
 				cl.show(cards, joinOrHostTitle);
 				try {
-					poker = new Poker();
+					poker = new Poker(username);
 				} catch (Exception e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -374,7 +368,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		@Override
 		protected ArrayList<User> doInBackground() throws Exception {
 			try {
-				//SwingGUI.poker.StartGame(true,(SwingGUI.numberOfSlots.getSelectedIndex()+1),this);
+				SwingGUI.poker.StartGame(true,(SwingGUI.numberOfSlots.getSelectedIndex()+1),this);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();

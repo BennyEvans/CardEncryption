@@ -240,7 +240,7 @@ public class ComService {
 	 * @throws InvalidSubscriptionException the invalid subscription exception
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-	public ArrayList<User> startNewGame(final int numberOfSlots) throws InterruptedException, InvalidSubscriptionException, IOException {
+	public ArrayList<User> startNewGame(final int numberOfSlots, HostGameTask hgt) throws InterruptedException, InvalidSubscriptionException, IOException {
 
 		gameHost = user;
 
@@ -422,8 +422,9 @@ public class ComService {
 	 * @throws InvalidSubscriptionException the invalid subscription exception
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-	public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSubscriptionException, IOException {
+	public ArrayList<User> joinGameOffMenu(SearchGamesTask jgtl) throws InterruptedException, InvalidSubscriptionException, IOException {
 
+		jgt = jgtl;
 		Subscription gameFullSub;
 		Subscription gameAdvertisementSub;
 		/**

@@ -16,6 +16,8 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
+import mentalpoker.SwingGUI.HostGameTask;
+
 import org.avis.client.InvalidSubscriptionException;
 
 /**
@@ -37,14 +39,14 @@ public class Poker {
 	 *
 	 * @throws Exception the exception
 	 */
-	public Poker() throws Exception {
+	public Poker(String username) throws Exception {
 		
 		//com = new ComService(gameUser, "elvin://elvin.students.itee.uq.edu.au", sig);
 		//return;
 
-		setUsername();
+		setUsername(username);
 		com = new ComService(gameUser, "elvin://elvin.students.itee.uq.edu.au", sig);
-		StartGame();
+		//StartGame();
 		return;
 
 	}
@@ -65,7 +67,7 @@ public class Poker {
 	 * @throws NoSuchAlgorithmException 
 	 * @throws InvalidKeySpecException 
 	 */
-	/*
+	
 	public ArrayList<User> StartGame(boolean isGameHost, int slots, HostGameTask hgt) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidSubscriptionException, InterruptedException, IOException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
 		//Menu choice becomes the integer chosen by the user.
 		//int menuChoice = MenuOptions.printMainMenu();
@@ -103,18 +105,19 @@ public class Poker {
 		
 		return null;
 	}
-	*/
 	
-	private void StartGame() throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidSubscriptionException, InterruptedException, IOException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
+	
+	/*public void StartGame(boolean isGameHost, int numberOfSlots, HostGameTask hgt) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidSubscriptionException, InterruptedException, IOException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
 		//Menu choice becomes the integer chosen by the user.
-		int menuChoice = MenuOptions.printMainMenu();
-		boolean isGameHost = false;
+		//int menuChoice = MenuOptions.printMainMenu();
 		ArrayList<User> gameUsers = null;
+		
+		
 		
 		//send your public key to anyone who requests it
 		//com.acceptPubKeySigRequests(sig.getPublicKey());
 		
-		if (menuChoice == MenuOptions.HOST_GAME)
+		/*if (menuChoice == MenuOptions.HOST_GAME)
 		{
 			isGameHost = true;
 			gameUsers = com.startNewGame(MenuOptions.startNewGameMenu());
@@ -150,7 +153,7 @@ public class Poker {
 		}
 		
 		return;
-	}
+	}*/
 	
 	private void playGameAsHost(ArrayList<User> gameUsers) throws IOException, InterruptedException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
 		EncryptedDeck encDeck = null;
@@ -305,18 +308,12 @@ public class Poker {
 	/**
 	 * Sets the username.
 	 */
-	public void setUsername()
+	public void setUsername(String setUsernameString) throws IOException
 	{
-		System.out.print("Enter your username: ");
-		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		//System.out.print("Enter your username: ");
+		//BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
-		try {
-			gameUser = new User(br.readLine(), sig.getPublicKey());
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			System.err.println("UNABLE TO READ FROM COMMAND LINE");
-		}
+		gameUser = new User(setUsernameString, sig.getPublicKey());
 	}
 	
 	
@@ -330,6 +327,7 @@ public class Poker {
     	/*
     	 * This stuff is disabled for the moment because it includes its own loops.
     	 */
+		/*
 		try {
 		    sig = new SigService();
     		new Poker();
@@ -338,8 +336,8 @@ public class Poker {
     		e.printStackTrace();
     	}
 		System.exit(0);
+		*/
 		
-		/*
 		try {
 			sig = new SigService();
 		} catch (Exception e) {
@@ -354,7 +352,7 @@ public class Poker {
 
             }
         });
-        */
+        
 	}
 
 
