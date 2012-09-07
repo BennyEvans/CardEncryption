@@ -240,175 +240,6 @@ public class ComService {
 	 * @throws InvalidSubscriptionException the invalid subscription exception
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-	/*
-	public ArrayList<User> startNewGame(final int numberOfSlots, final HostGameTask hgt) throws InterruptedException, InvalidSubscriptionException, IOException {
-
-		gameHost = user;
-		this.hgt = hgt; //Brings in a copy of the swingworker so that we can publish things.
-		System.out.println("The fucking thing sucks");
-
-		//notify potential players that there is a game
-		final Runnable notifyPotentialJoiners = new Runnable() {
-			public void run() {
-				if (currentGameMembers.size() >= numberOfSlots) {
-					notificationHandle.cancel(true);
-				} else {
-					try {
-						sendGameNotification();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				}
-			}
-
-			private void sendGameNotification() throws IOException {
-				Notification gameNotification = new Notification();
-				gameNotification.set(GAME_ID, gameHost.getID());
-				gameNotification.set("hostUsername", gameHost.getUsername());
-				gameNotification.set(NOT_TYPE, NEW_GAME);
-				gameNotification.set(PUB_KEY, sigPublicKey);
-
-				elvin.send(gameNotification);
-
-			}
-		};
-
-
-		if (user.getUsername() == null) {
-			System.err.println("You cannot have an empty username.");
-			return null;
-		}
-		// Check that there is a sufficient number of slots specified
-		if (numberOfSlots < 1) {
-			System.err.println("You must specify at least one slot available.");
-			return null;
-		}
-
-		// Subscribe to responses bearing my username. This will be useful after we actually advertise the game.
-		gameSub = elvin.subscribe(NOT_TYPE + " == '" + JOIN_GAME +"' && " + GAME_ID + " == '"
-				+ gameHost.getID() + "'");
-
-
-		System.out.println("Now hosting game...");
-		this.hgt.publishDelegate("Now hosting game...");
-
-		//Receive requests to join the game.
-		gameSub.addListener(new NotificationListener() {
-			// This is called if we emile a response requesting to join our game.
-			public void notificationReceived(NotificationEvent event) {
-				if (currentGameMembers.size() < numberOfSlots) {
-
-					// This means that the notification by the client that they want to join in
-					// must have a field named "playerUsername" with their own username included.
-					User tmpUser = new User(event.notification.getString("playerUsername"),
-							event.notification.getString("playerUUID"),
-							byteArrayToPublicKey((byte[]) event.notification.get(PUB_KEY))
-							);
-					currentGameMembers.add(tmpUser);
-					String numberOfSlotsLeft = Integer.toString(numberOfSlots - currentGameMembers.size());
-					System.out.println(event.notification.getString("playerUsername")
-							+ " connected... " + numberOfSlotsLeft + " slots left.");
-
-					//Publish to swingworker
-					hgt.publishDelegate(event.notification.getString("playerUsername")
-							+ " connected... " + numberOfSlotsLeft + " slots left.");
-
-
-					if (currentGameMembers.size() == numberOfSlots){
-						//send start game notification
-						Notification not = new Notification();
-						UserList ul = new UserList();
-
-						currentGameMembers.add(user);
-						ul.users = new ArrayList<User>(currentGameMembers);
-						ByteArrayOutputStream bos = new ByteArrayOutputStream();
-						ObjectOutput out = null;
-						try {
-							out = new ObjectOutputStream(bos);
-							out.writeObject(ul);
-						} catch (IOException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}   
-
-						byte[] tmpBytes = bos.toByteArray();
-
-						not.set(NOT_TYPE, START_GAME);
-						not.set(GAME_ID, gameHost.getID());
-						not.set(GAME_USERS, tmpBytes);
-
-						try {
-							elvin.send(not);
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-
-						try {
-							out.close();
-							bos.close();
-						} catch (IOException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-
-						synchronized (gameSub) {
-							gameSub.notify();
-						}
-					}
-
-				} else {
-
-					System.out.println("User attempted to join, but game is full.");
-					Notification gameFullNotification = new Notification();
-					gameFullNotification.set(NOT_TYPE, GAME_FULL);
-					gameFullNotification.set(GAME_ID, gameHost.getID());				
-
-					try {
-						elvin.send(gameFullNotification);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				}
-			}
-		});
-
-
-		notificationHandle = scheduler.scheduleAtFixedRate(
-				notifyPotentialJoiners, 498, 498, TimeUnit.MILLISECONDS);
-
-		synchronized (gameSub) {
-			//wait until game is full
-			gameSub.wait();
-		}
-
-		//cleanup
-		notificationHandle.cancel(true);
-		gameSub.remove();
-		scheduler.shutdown();
-
-		//sleep for 250ms...
-		//I'm not sure this is necessary but its just a precaution... is Elvin FIFO?
-		//It's here to prevent the next command (send pq) being out of order and received
-		//before the START_GAME notification.
-		Thread.sleep(100);
-
-		//send game full to other users not in the game
-		Notification gameFullNotification = new Notification();
-		gameFullNotification.set(NOT_TYPE, GAME_FULL);
-		gameFullNotification.set(GAME_ID, gameHost.getID());				
-		elvin.send(gameFullNotification);
-
-		Thread.sleep(100);
-
-		System.out.println("Starting Game!");
-
-		ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
-		currentGameMembers = null;
-		availableGames = null;
-		return tmp;
-
-	}
-	 */
 	public ArrayList<User> startNewGame(final int numberOfSlots) throws InterruptedException, InvalidSubscriptionException, IOException {
 
 		gameHost = user;
@@ -591,144 +422,6 @@ public class ComService {
 	 * @throws InvalidSubscriptionException the invalid subscription exception
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-
-	/*
-	public ArrayList<User> joinGameOffMenu(final JoinGameTask jgt) throws InterruptedException, InvalidSubscriptionException, IOException {
-		this.jgt = jgt;
-		Subscription gameFullSub;
-		Subscription gameAdvertisementSub;
-
-		//We want to repeatedly clear the screen, and print out the available
-		//games and a prompt asking which username to connect to.
-
-		final Runnable checkForAvailableGames = new Runnable() {
-			public void run() {
-				MiscHelper.clearConsole();
-				writeCurrentAvailableGames();
-			}
-
-			private void writeCurrentAvailableGames() {
-				//System.out.println("Games available:");
-
-				//Push availablegames to the joingametask.
-				jgt.publishDelegate(availableGames);
-
-
-				//Iterator<User> itr = availableGames.iterator();
-				//int i = 0;
-				//while (itr.hasNext()) {
-				//jgt.publishDelegate(itr.next().getUsername());
-				//System.out.println(String.valueOf(i) + " " + itr.next().getUsername());
-				//i++;
-				//}
-				//System.out.print("Choose a game (enter the number): ");
-
-			}
-		};
-
-		//System.out.println("Searching for available games...");
-		availableGames.clear();
-
-		// Subscribe to new game advertisement notifications
-		gameAdvertisementSub = elvin.subscribe(NOT_TYPE + " == '" + NEW_GAME + "'");
-
-		// Subscribe to game full notifications.
-		gameFullSub = elvin.subscribe(NOT_TYPE + " == '" + GAME_FULL + "'");
-
-		// Whenever a game notification is received, add it to the availableGames list if not in there already
-		gameAdvertisementSub.addListener(new NotificationListener() {
-			// This is called if we have a response requesting to join our game.
-			public void notificationReceived(NotificationEvent event) {
-
-				User tmpUser = new User(event.notification
-						.getString("hostUsername"), event.notification
-						.getString(GAME_ID),
-						byteArrayToPublicKey((byte[]) event.notification.get(PUB_KEY)));
-				if (findGameHostByID(tmpUser.getID()) == null) {
-					availableGames.add(tmpUser);
-				}
-			}
-
-		});
-
-
-		// If a game is reported as full, remove it from the available games list.
-		gameFullSub.addListener(new NotificationListener() {
-			public void notificationReceived(NotificationEvent event) {
-				// may need to change this
-				User tmpUser = findGameHostByID(event.notification.getString(GAME_ID));
-				if (tmpUser != null){
-					availableGames.remove(tmpUser);
-				}
-			}
-
-		});
-
-
-		//BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-
-		notificationHandle = scheduler.scheduleAtFixedRate(
-				checkForAvailableGames, 1000, 3000, TimeUnit.MILLISECONDS);
-
-
-		// Grab the hoster
-		try {
-			String gameHostString = jgt.waitForInstructionsBuffer.take();
-			System.out.println("I woke up!");
-			boolean hostFoundAmongstGames = false;
-			for (User usr:availableGames)
-			{
-				if (usr.getUsername().equals(gameHostString))
-				{
-					gameHost = usr;
-					hostFoundAmongstGames = true;
-					break;
-				}
-				if (!hostFoundAmongstGames)
-				{
-					System.err.println("Host not found in available games.");
-				}
-				System.out.println("End of for loop");
-			}
-
-			//gameHost = availableGames.get(Integer.parseInt(br.readLine()));
-		} catch (NumberFormatException e) {
-			System.err.println("Your input was not a number!");
-			currentGameMembers = null;
-			availableGames = null;
-			scheduler.shutdown();
-			notificationHandle.cancel(true);
-			gameFullSub.remove();
-			gameAdvertisementSub.remove();
-			return null;
-		}
-
-		//cleanup
-		scheduler.shutdown();
-		notificationHandle.cancel(true);
-		gameFullSub.remove();
-		gameAdvertisementSub.remove();
-
-		System.out.println("After cleanup");
-
-		// At this point, we wish to notify the host that we wish to join their game.
-		if (joinGame()){
-			System.err.println("Error Joining Game.");
-			currentGameMembers = null;
-			availableGames = null;
-			return null;
-		}
-
-		System.out.println("Joined Game!");
-
-		ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
-		currentGameMembers = null;
-		availableGames = null;
-		return tmp;
-
-	}
-	 */
-
 	public ArrayList<User> joinGameOffMenu() throws InterruptedException, InvalidSubscriptionException, IOException {
 
 		Subscription gameFullSub;
@@ -828,7 +521,7 @@ public class ComService {
 			availableGames = null;
 			return null;
 		}
-		
+		return currentGameMembers;
 	}
 
 
@@ -1379,54 +1072,12 @@ public class ComService {
 					System.exit(0);
 				}
 
-
-				if (userRequesting == null){
-					return;
-				}
-
-				decryptionCount++;
-				if (decryptionCount > numRequests){
-					try {
-						encSub.remove();
-					} catch (IOException e1) {
-						shutdown();
-						System.exit(-2);
-					}
-
-					byte[] retBytes = bos.toByteArray();
-
-					not = new Notification();
-					not.set(NOT_TYPE, DECRYPT_HAND_REPLY);
-					not.set(GAME_ID, gameHost.getID());
-					not.set(REQ_USER, userRequesting.getID());
-					not.set(ENCRYPTED_HAND, retBytes);
-
-					try {
-						elvin.send(not);
-					} catch (IOException e2) {
-						shutdown();
-						System.exit(-2);
-					}
-
-					try {
-						bos.close();
-						out.close();
-					} catch (IOException e1) {
-						//do nothing
-					}
-					//decrypt and sign
-					encHand = rsaService.decyrptEncHand(encHand);
-					sig.createSignature(encHand);
-					bis.close();
-					in.close();
-				}
-
 				try {
 					out = new ObjectOutputStream(bos);
 					out.writeObject(encHand);
 				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
+					shutdown();
+					System.exit(1);
 				}
 
 				byte[] retBytes = bos.toByteArray();
@@ -1440,16 +1091,16 @@ public class ComService {
 				try {
 					elvin.send(not);
 				} catch (IOException e2) {
-					// TODO Auto-generated catch block
-					e2.printStackTrace();
+					shutdown();
+					System.exit(1);
 				}
 
 				try {
 					bos.close();
 					out.close();
 				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
+					shutdown();
+					System.exit(1);
 				}
 
 			}
@@ -1499,8 +1150,6 @@ public class ComService {
 					shutdown();
 					System.exit(0);
 				}
-				bis.close();
-				in.close();
 
 				synchronized (encSub) {
 					encSub.notify();
