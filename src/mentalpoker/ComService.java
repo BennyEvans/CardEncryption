@@ -424,33 +424,27 @@ public class ComService {
 	 */
 	public ArrayList<User> joinGameOffMenu(SearchGamesTask jgtl) throws InterruptedException, InvalidSubscriptionException, IOException {
 
-		jgt = jgtl;
+		this.jgt = jgtl;
 		Subscription gameFullSub;
 		Subscription gameAdvertisementSub;
+		
 		/**
 		 * We want to repeatedly clear the screen, and print out the available
 		 * games and a prompt asking which username to connect to.
 		 */
 		final Runnable checkForAvailableGames = new Runnable() {
 			public void run() {
-				MiscHelper.clearConsole();
+				//MiscHelper.clearConsole();
 				writeCurrentAvailableGames();
 			}
 
 			private void writeCurrentAvailableGames() {
-				System.out.println("Games available:");
-				Iterator<User> itr = availableGames.iterator();
-				int i = 0;
-				while (itr.hasNext()) {
-					System.out.println(String.valueOf(i) + " " + itr.next().getUsername());
-					i++;
-				}
-				System.out.print("Choose a game (enter the number): ");
+				jgt.publishDelegate(availableGames);
 
 			}
 		};
 
-		System.out.println("Searching for available games...");
+		//System.out.println("Searching for available games...");
 		availableGames.clear();
 
 		// Subscribe to new game advertisement notifications
@@ -489,7 +483,7 @@ public class ComService {
 		});
 
 
-		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		//BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
 		notificationHandle = scheduler.scheduleAtFixedRate(
 				checkForAvailableGames, 1000, 3000, TimeUnit.MILLISECONDS);
@@ -497,9 +491,27 @@ public class ComService {
 
 		// Grab the hoster
 		try {
-			gameHost = availableGames.get(Integer.parseInt(br.readLine()));
+			String gameHostString = jgt.waitForInstructionsBuffer.take();
+			System.out.println("I woke up!");
+			boolean hostFoundAmongstGames = false;
+			for (User usr:availableGames)
+			{
+				if (usr.getUsername().equals(gameHostString))
+				{
+					gameHost = usr;
+					hostFoundAmongstGames = true;
+					break;
+				}
+				if (!hostFoundAmongstGames)
+				{
+					System.err.println("Host not found in available games.");
+				}
+				System.out.println("End of for loop");
+			}
+
+			//gameHost = availableGames.get(Integer.parseInt(br.readLine()));
 		} catch (NumberFormatException e) {
-			System.err.println("Your input was not a number.");
+			System.err.println("Your input was not a number!");
 			currentGameMembers = null;
 			availableGames = null;
 			scheduler.shutdown();
@@ -522,7 +534,13 @@ public class ComService {
 			availableGames = null;
 			return null;
 		}
-		return currentGameMembers;
+		
+		System.out.println("Joined Game!");
+
+		ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
+		currentGameMembers = null;
+		availableGames = null;
+		return tmp;
 	}
 
 

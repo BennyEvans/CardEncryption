@@ -106,55 +106,6 @@ public class Poker {
 		return null;
 	}
 	
-	
-	/*public void StartGame(boolean isGameHost, int numberOfSlots, HostGameTask hgt) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidSubscriptionException, InterruptedException, IOException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
-		//Menu choice becomes the integer chosen by the user.
-		//int menuChoice = MenuOptions.printMainMenu();
-		ArrayList<User> gameUsers = null;
-		
-		
-		
-		//send your public key to anyone who requests it
-		//com.acceptPubKeySigRequests(sig.getPublicKey());
-		
-		/*if (menuChoice == MenuOptions.HOST_GAME)
-		{
-			isGameHost = true;
-			gameUsers = com.startNewGame(MenuOptions.startNewGameMenu());
-		} else if (menuChoice == MenuOptions.JOIN_GAME) {
-			isGameHost = false;
-			gameUsers = com.joinGameOffMenu();
-		} else if (menuChoice == Integer.MIN_VALUE)
-		{
-			System.err.println("Sorry, I was unable to recognise what your input as a number. Try numbers, like 1,2,3 etc.");
-			StartGame();
-			return;
-		}
-		
-		if (gameUsers == null){
-			//could call startGame() here but exit is good enough for now
-			com.shutdown();
-			System.exit(1);
-			return;
-		}
-		
-		System.out.println("\nGame Players:");
-		for (int i = 0; i < gameUsers.size(); i++){
-			//System.out.println(gameUsers.get(i).getUsername() + " " + gameUsers.get(i).getID() + new String(gameUsers.get(i).getPublicKey().getEncoded()));
-			System.out.println(gameUsers.get(i).getUsername() + " " + gameUsers.get(i).getID());
-		}
-		System.out.println("");
-		
-
-		if (isGameHost){
-			playGameAsHost(gameUsers);
-		} else {
-			 playGameAsPlayer(gameUsers);
-		}
-		
-		return;
-	}*/
-	
 	private void playGameAsHost(ArrayList<User> gameUsers) throws IOException, InterruptedException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
 		EncryptedDeck encDeck = null;
 		RSAService rsaService = new RSAService();
