@@ -17,6 +17,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
 import mentalpoker.SwingGUI.HostGameTask;
+import mentalpoker.SwingGUI.SearchGamesTask;
 
 import org.avis.client.InvalidSubscriptionException;
 
@@ -98,15 +99,13 @@ public class Poker {
 		
 
 		if (isGameHost){
-			playGameAsHost(gameUsers);
-		} else {
-			 playGameAsPlayer(gameUsers);
+			playGameAsHost(gameUsers, hgt);
 		}
 		
 		return null;
 	}
 	
-	public void playGameAsHost(ArrayList<User> gameUsers) throws IOException, InterruptedException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
+	public void playGameAsHost(ArrayList<User> gameUsers, HostGameTask hgt) throws IOException, InterruptedException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
 		EncryptedDeck encDeck = null;
 		RSAService rsaService = new RSAService();
 		EncryptedHand myHand = null;
@@ -192,6 +191,10 @@ public class Poker {
 		String card2 = Character.toString(hand.cards.get(1).cardType) + "-" + new String(hand.cards.get(1).suit);
 		System.out.println("My Cards: " + card1 + " " + card2);
 		
+		//Provide the cards back to the user.
+		hgt.waitForInstructionsBuffer.put(card1);
+		hgt.waitForInstructionsBuffer.put(card2);
+		
 		//sit and block here until everyone has said gameover
 		Thread.sleep(2500);
 		com.stopDecryptingHands();
@@ -200,7 +203,7 @@ public class Poker {
 	}
 	
 	
-	public void playGameAsPlayer(ArrayList<User> gameUsers) throws InvalidSubscriptionException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException, InterruptedException, IOException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+	public void playGameAsPlayer(ArrayList<User> gameUsers, SearchGamesTask jgt) throws InvalidSubscriptionException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException, InterruptedException, IOException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
 		RSAService rsaService = com.waitPQ();
 		EncryptedHand myHand;
 		
@@ -227,10 +230,15 @@ public class Poker {
 			
 		}
 		
+
+		
 		Hand hand = rsaService.decyrptHand(myHand);
 		String card1 = Character.toString(hand.cards.get(0).cardType) + "-" + new String(hand.cards.get(0).suit);
 		String card2 = Character.toString(hand.cards.get(1).cardType) + "-" + new String(hand.cards.get(1).suit);
 		System.out.println("My Cards: " + card1 + " " + card2);
+		
+		jgt.waitForInstructionsBuffer.put(card1);
+		jgt.waitForInstructionsBuffer.put(card2);
 		
 		//sit and block here until everyone has said gameover
 		Thread.sleep(2500);

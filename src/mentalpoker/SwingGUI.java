@@ -10,6 +10,8 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -26,8 +28,10 @@ import java.util.concurrent.BlockingQueue;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.imageio.ImageIO;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
@@ -71,6 +75,8 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 	private DefaultListModel listModel;
 	private JList gamesList;
 	private JTextField nameofHosterField;
+	private GridBagConstraints cardScreenGBC;
+	private JPanel cardScreenLayout;
 	
 	private SigService sig;
 
@@ -80,6 +86,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 	final static String slotChoiceTitle = "slotChoiceTitle";
 	final static String hostingScreenGridLayoutTitle = "hostingScreenGridLayoutTitle";
 	final static String joinGameScreenTitle = "joinGameScreenTitle";
+	final static String cardScreenTitle = "cardScreenTitle";
 
 	public void addComponentToPane(Container pane)
 	{
@@ -234,12 +241,23 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		joinGameButton.setActionCommand("joinGameFromSearch");
 		joinGameButton.addActionListener(this);
 		
+		/**
+		 * Card screen
+		 */
+		
+		cardScreenLayout = new JPanel(new GridBagLayout());
+		cardScreenGBC = new GridBagConstraints();
+		cardScreenGBC.gridx = 0;
+		cardScreenGBC.gridy = 0;
+		
+		
 		cards = new JPanel(new CardLayout());
 		cards.add(usernameInputPaneGridLayout, usernameInputTitle);
 		cards.add(joinOrHostPageOuterLayout,joinOrHostTitle);
 		cards.add(slotChoiceLayout,slotChoiceTitle);
 		cards.add(hostingScreenGridLayout,hostingScreenGridLayoutTitle);
 		cards.add(joinGamePanel,joinGameScreenTitle);
+		cards.add(cardScreenLayout,cardScreenTitle);
 
 
 		pane.add(cards, BorderLayout.WEST);
@@ -334,6 +352,22 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 				
 			}
 			
+			//Take from the instruction to get the cards back.
+			/*String card1 = "";
+			String card2 = "";
+			try {
+				card1 = hgt.waitForInstructionsBuffer.take();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			try {
+				card2 = hgt.waitForInstructionsBuffer.take();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			
+			System.out.println("From inside hostGamesTask: " + card1 + card2);*/
+			
 			
 		} else if ("joinGame".equals(arg0.getActionCommand()))
 		{
@@ -347,10 +381,36 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			System.out.println("join game button pushed?");
 			try {
 				jgt.waitForInstructionsBuffer.put(nameofHosterField.getText());
+				Thread.sleep(500);
+				
+				//Take from the instruction to get the cards back.
+				String card1 = jgt.waitForInstructionsBuffer.take();
+				String card2 = jgt.waitForInstructionsBuffer.take();
+				
+				System.out.println("From inside searchgamestask: " + card1 + card2);
+				
+				//Add the right cards to the screen
+				System.out.println(new java.io.File("").getAbsolutePath()+"src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card1+".png");
+				BufferedImage card1Picture = ImageIO.read(new File("src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card1+".png"));
+				BufferedImage card2Picture = ImageIO.read(new File("src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card2+".png"));
+				JLabel card1Label = new JLabel(new ImageIcon(card1Picture));
+				JLabel card2Label = new JLabel(new ImageIcon(card2Picture));
+				cardScreenLayout.add(card1Label,cardScreenGBC);
+				cardScreenGBC.gridx = 1;
+				cardScreenLayout.add(card2Label,cardScreenGBC);
+				
+				
+				//Now show the games screen
+				
+				CardLayout cl = (CardLayout)(cards.getLayout());
+				cl.show(cards, cardScreenTitle);
+				
 			} catch (InterruptedException iex)
 			{
 				jgt.cancel(true);
 				throw new RuntimeException("Unexpected interruption");
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
 			
 		}
@@ -359,6 +419,8 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 	public class HostGameTask extends SwingWorker<ArrayList<User>, String> {
 
 		private int numberOfPlayersCurrently = 0;
+		
+		public BlockingQueue<String> waitForInstructionsBuffer = new ArrayBlockingQueue<String>(100);
 		
 		public void publishDelegate(String message)
 		{
@@ -378,7 +440,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			
 			if (gameUsers != null)
 			{
-				SwingGUI.poker.playGameAsHost(gameUsers);
+				SwingGUI.poker.playGameAsHost(gameUsers,hgt);
 			}
 			return null;
 		}
@@ -417,7 +479,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		@Override
 		protected ArrayList<User> doInBackground() throws Exception {
 			ArrayList<User> userListLocal = SwingGUI.poker.com.joinGameOffMenu(this);
-			SwingGUI.poker.playGameAsPlayer(userListLocal);
+			SwingGUI.poker.playGameAsPlayer(userListLocal,jgt);
 			return userListLocal;
 		}
 
