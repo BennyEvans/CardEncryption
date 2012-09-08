@@ -367,11 +367,18 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		
 		@Override
 		protected ArrayList<User> doInBackground() throws Exception {
+			ArrayList<User> gameUsers = null;
+			
 			try {
-				SwingGUI.poker.StartGame(true,(SwingGUI.numberOfSlots.getSelectedIndex()+1),this);
+				gameUsers = SwingGUI.poker.StartGame(true,(SwingGUI.numberOfSlots.getSelectedIndex()+1),this);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+			}
+			
+			if (gameUsers != null)
+			{
+				SwingGUI.poker.playGameAsHost(gameUsers);
 			}
 			return null;
 		}
@@ -410,7 +417,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		@Override
 		protected ArrayList<User> doInBackground() throws Exception {
 			ArrayList<User> userListLocal = SwingGUI.poker.com.joinGameOffMenu(this);
-			
+			SwingGUI.poker.playGameAsPlayer(userListLocal);
 			return userListLocal;
 		}
 

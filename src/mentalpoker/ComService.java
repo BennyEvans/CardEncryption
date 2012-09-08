@@ -149,7 +149,15 @@ public class ComService {
 	 * @return the user
 	 */
 	private User findUserByID(String userID) {
+		if (currentGameMembers == null)
+		{
+			System.err.println("ERROR, currentGameMembers IS NULL.");
+		}
 		for (int i = 0; i < currentGameMembers.size(); i++) {
+			if (currentGameMembers.get(i) == null)
+			{
+				System.out.println("ERROR, null current member.");
+			}
 			if (currentGameMembers.get(i).getID().equals(userID)) {
 				return currentGameMembers.get(i);
 			}
@@ -483,8 +491,6 @@ public class ComService {
 		});
 
 
-		//BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-
 		notificationHandle = scheduler.scheduleAtFixedRate(
 				checkForAvailableGames, 1000, 3000, TimeUnit.MILLISECONDS);
 
@@ -538,7 +544,7 @@ public class ComService {
 		System.out.println("Joined Game!");
 
 		ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
-		currentGameMembers = null;
+		//currentGameMembers = null;
 		availableGames = null;
 		return tmp;
 	}
@@ -604,6 +610,7 @@ public class ComService {
 
 					if (ul == null){
 						currentGameMembers = null;
+						System.err.println("ul IS NULL");
 					} else {
 						currentGameMembers = ul.users;
 						User tmpUser = findUserByID(user.getID());
@@ -1049,7 +1056,13 @@ public class ComService {
 				ObjectOutput out = null;
 				EncryptedHand encHand = null;
 				Notification not;
-
+				try {
+					Thread.sleep(250);
+				} catch (InterruptedException exc)
+				{
+					exc.printStackTrace();
+				}
+				
 				User userRequesting = findUserByID(e.notification.getString(SOURCE_USER));
 
 				if (userRequesting == null){
@@ -1113,6 +1126,8 @@ public class ComService {
 					shutdown();
 					System.exit(1);
 				}
+				
+				System.out.println("Finished decryption request");
 
 				try {
 					bos.close();
