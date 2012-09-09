@@ -38,6 +38,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JRootPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
@@ -113,6 +114,9 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		startButton.addActionListener(this);
 		usernameInputPaneLine1.add(usernameLabel);
 		usernameInputPaneLine1.add(usernameField);
+		
+		JRootPane rootPane = frame.getRootPane();
+	    rootPane.setDefaultButton(startButton);
 		
 
 
@@ -470,7 +474,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			if (splitString[0].equals("Now"))
 			{
 				//Ignore me
-			} else if (!splitString[0].equals("HAVECARDS1c2n90801280c498n12904c80912c490102984nc1")){
+			} else if (splitString[1].equals("connected...")){
 				String username = splitString[0];
 				numberOfPlayersCurrently++;
 				userButtons.get(numberOfPlayersCurrently-1).setText(username);

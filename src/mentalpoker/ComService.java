@@ -117,6 +117,7 @@ public class ComService {
 	public static final int SIGNATURE_FAILED = 2;
 	public static final int USER_TABLE_SIGNATURE_FAILED = 3;
 	public static final int DECRYPT_REQUEST_ABUSE = 4;
+	
 
 	/** The notification handle. */
 	ScheduledFuture<?> notificationHandle;
@@ -248,9 +249,10 @@ public class ComService {
 	 * @throws InvalidSubscriptionException the invalid subscription exception
 	 * @throws IOException Signals that an I/O exception has occurred.
 	 */
-	public ArrayList<User> startNewGame(final int numberOfSlots, HostGameTask hgt) throws InterruptedException, InvalidSubscriptionException, IOException {
+	public ArrayList<User> startNewGame(final int numberOfSlots, final HostGameTask hgt) throws InterruptedException, InvalidSubscriptionException, IOException {
 
 		gameHost = user;
+		this.hgt = hgt;
 
 		//notify potential players that there is a game
 		final Runnable notifyPotentialJoiners = new Runnable() {
@@ -311,6 +313,8 @@ public class ComService {
 					currentGameMembers.add(tmpUser);
 					String numberOfSlotsLeft = Integer.toString(numberOfSlots - currentGameMembers.size());
 					System.out.println(event.notification.getString("playerUsername")
+							+ " connected... " + numberOfSlotsLeft + " slots left.");
+					hgt.publishDelegate(event.notification.getString("playerUsername")
 							+ " connected... " + numberOfSlotsLeft + " slots left.");
 
 					if (currentGameMembers.size() == numberOfSlots){
