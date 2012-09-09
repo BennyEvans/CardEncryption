@@ -77,6 +77,8 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 	private JTextField nameofHosterField;
 	private GridBagConstraints cardScreenGBC;
 	private JPanel cardScreenLayout;
+	private BufferedImage titleImage;
+	private JLabel titleImageLabel;
 	
 	private SigService sig;
 
@@ -90,6 +92,15 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 
 	public void addComponentToPane(Container pane)
 	{
+		//Set up the title image for reuse.
+		titleImage = null;
+		try {
+			titleImage = ImageIO.read(new File("src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+"title.png"));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		JLabel titleImageLabel = new JLabel(new ImageIcon(titleImage));
 
 		/**
 		 * Username input card
@@ -102,9 +113,11 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		startButton.addActionListener(this);
 		usernameInputPaneLine1.add(usernameLabel);
 		usernameInputPaneLine1.add(usernameField);
+		
 
 
 		JPanel usernameInputPaneGridLayout = new JPanel(new GridLayout(0,1));
+		usernameInputPaneGridLayout.add(titleImageLabel);
 		usernameInputPaneGridLayout.add(usernameInputPaneLine1);
 
 		JPanel usernameInputButtons = new JPanel();
@@ -148,13 +161,17 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		JButton startGameButton = new JButton("Start Game");
 		startGameButton.setActionCommand("startGameWithSlots");
 		startGameButton.addActionListener(this);
+
+		JLabel titleImageLabel2 = new JLabel(new ImageIcon(titleImage));
+		slotChoiceLayout.add(titleImageLabel2);
 		slotChoiceLayout.add(hostingGameTitle);
 		slotChoiceLayout.add(numberOfSlotsInstruction);
 		slotChoiceLayout.add(numberOfSlots);
 		slotChoiceLayout.add(startGameButton);
 		slotChoiceLayout.setVisible(false); //This is hidden, will be shown later.
 		slotChoiceLayout.setLayout(new BoxLayout(slotChoiceLayout, BoxLayout.Y_AXIS));
-
+		JLabel titleImageLabel3 = new JLabel(new ImageIcon(titleImage));
+		joinOrHostPageOuterLayout.add(titleImageLabel3);
 		joinOrHostPageOuterLayout.add(joinOrHostPagePanel);
 
 
@@ -167,17 +184,23 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		JLabel nowHosting = new JLabel("Now hosting, users will appear in the boxes as they connect");
 		hostGameGBConstraints = new GridBagConstraints();
 		hostGameGBConstraints.fill = GridBagConstraints.HORIZONTAL;
+		
+		JLabel titleImageLabel4 = new JLabel(new ImageIcon(titleImage));
+		hostGameGBConstraints.gridx = 0;
+		hostGameGBConstraints.gridy = 0;
+		hostingScreenGridLayout.add(titleImageLabel4,hostGameGBConstraints);
+		
+		
 		hostGameGBConstraints.ipady = 40;
 		hostGameGBConstraints.gridwidth = 3;
 		hostGameGBConstraints.gridx = 0;
-		hostGameGBConstraints.gridy = 0;
+		hostGameGBConstraints.gridy = 1;
 		
 		//constr.ipadx = 30;
 		//constr.ipady = 20;
 		hostingScreenGridLayout.add(nowHosting,hostGameGBConstraints);
 		
 		userButtons = new ArrayList<JButton>();
-		//userLabels = new ArrayList<JLabel>();
 		
 		//Create user boxes for people, initially black.
 		for (int i = 0; i < 10; i++)
@@ -249,6 +272,10 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		cardScreenGBC = new GridBagConstraints();
 		cardScreenGBC.gridx = 0;
 		cardScreenGBC.gridy = 0;
+		cardScreenGBC.gridwidth = 2;
+		JLabel yourCardsTitle = new JLabel("Your hand:");
+		cardScreenLayout.add(yourCardsTitle,cardScreenGBC);
+		cardScreenGBC.gridwidth = 1;
 		
 		
 		cards = new JPanel(new CardLayout());
@@ -317,7 +344,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			frame.setSize(700,700);
 			
 			
-			int currentY = 1;
+			int currentY = 2;
 			int currentX = 0;
 			
 			hostGameGBConstraints.gridwidth = 1;
@@ -326,6 +353,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			
 			System.out.println("Number of i: " + (SwingGUI.numberOfSlots.getSelectedIndex()+1));
 			//Spawn a box for the number of slots available.
+			hostGameGBConstraints.gridwidth = 1;
 			for (int i = 0; i <= (SwingGUI.numberOfSlots.getSelectedIndex()); i++)
 			{
 				if (currentX <= 2)
@@ -352,21 +380,6 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 				
 			}
 			
-			//Take from the instruction to get the cards back.
-			/*String card1 = "";
-			String card2 = "";
-			try {
-				card1 = hgt.waitForInstructionsBuffer.take();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			try {
-				card2 = hgt.waitForInstructionsBuffer.take();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			
-			System.out.println("From inside hostGamesTask: " + card1 + card2);*/
 			
 			
 		} else if ("joinGame".equals(arg0.getActionCommand()))
@@ -395,6 +408,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 				BufferedImage card2Picture = ImageIO.read(new File("src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card2+".png"));
 				JLabel card1Label = new JLabel(new ImageIcon(card1Picture));
 				JLabel card2Label = new JLabel(new ImageIcon(card2Picture));
+				cardScreenGBC.gridy = 1;
 				cardScreenLayout.add(card1Label,cardScreenGBC);
 				cardScreenGBC.gridx = 1;
 				cardScreenLayout.add(card2Label,cardScreenGBC);
@@ -419,6 +433,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 	public class HostGameTask extends SwingWorker<ArrayList<User>, String> {
 
 		private int numberOfPlayersCurrently = 0;
+		
 		
 		public BlockingQueue<String> waitForInstructionsBuffer = new ArrayBlockingQueue<String>(100);
 		
@@ -455,12 +470,50 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			if (splitString[0].equals("Now"))
 			{
 				//Ignore me
-			} else {
+			} else if (!splitString[0].equals("HAVECARDS1c2n90801280c498n12904c80912c490102984nc1")){
 				String username = splitString[0];
 				numberOfPlayersCurrently++;
 				userButtons.get(numberOfPlayersCurrently-1).setText(username);
 				userButtons.get(numberOfPlayersCurrently-1).setBackground(Color.green);
 			}
+			
+			if (splitString[0].equals("HAVECARDS1c2n90801280c498n12904c80912c490102984nc1"))
+			{
+				String card1 = splitString[1];
+				String card2 = splitString[2];
+				BufferedImage card1Picture = null;
+				try {
+					card1Picture = ImageIO.read(new File("src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card1+".png"));
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				BufferedImage card2Picture = null;
+				try {
+					card2Picture = ImageIO.read(new File("src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card2+".png"));
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				if (card1Picture != null && card2Picture != null)
+				{
+					JLabel card1Label = new JLabel(new ImageIcon(card1Picture));
+					JLabel card2Label = new JLabel(new ImageIcon(card2Picture));
+					cardScreenGBC.gridy = 1;
+					cardScreenLayout.add(card1Label,cardScreenGBC);
+					cardScreenGBC.gridx = 1;
+					cardScreenLayout.add(card2Label,cardScreenGBC);
+				}
+				
+				//Now show the games screen
+				frame.setSize(450,450);
+				CardLayout cl = (CardLayout)(cards.getLayout());
+				cl.show(cards, cardScreenTitle);
+			
+			
+			}
+			
+			
 			
 		}
 	}

@@ -187,13 +187,14 @@ public class Poker {
 		
 		Hand hand = rsaService.decyrptHand(myHand);
 		
+		
 		String card1 = Character.toString(hand.cards.get(0).cardType) + "-" + new String(hand.cards.get(0).suit);
 		String card2 = Character.toString(hand.cards.get(1).cardType) + "-" + new String(hand.cards.get(1).suit);
 		System.out.println("My Cards: " + card1 + " " + card2);
 		
 		//Provide the cards back to the user.
-		hgt.waitForInstructionsBuffer.put(card1);
-		hgt.waitForInstructionsBuffer.put(card2);
+		hgt.publishDelegate("HAVECARDS1c2n90801280c498n12904c80912c490102984nc1 " + card1 + " " + card2);
+		
 		
 		//sit and block here until everyone has said gameover
 		Thread.sleep(2500);
