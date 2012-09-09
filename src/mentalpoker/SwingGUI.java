@@ -192,18 +192,18 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		JLabel titleImageLabel4 = new JLabel(new ImageIcon(titleImage));
 		hostGameGBConstraints.gridx = 0;
 		hostGameGBConstraints.gridy = 0;
+		hostGameGBConstraints.gridwidth = 3;
 		hostingScreenGridLayout.add(titleImageLabel4,hostGameGBConstraints);
 		
 		
 		hostGameGBConstraints.ipady = 40;
-		hostGameGBConstraints.gridwidth = 3;
 		hostGameGBConstraints.gridx = 0;
 		hostGameGBConstraints.gridy = 1;
 		
 		//constr.ipadx = 30;
 		//constr.ipady = 20;
 		hostingScreenGridLayout.add(nowHosting,hostGameGBConstraints);
-		
+		hostGameGBConstraints.gridwidth = 1;
 		userButtons = new ArrayList<JButton>();
 		
 		//Create user boxes for people, initially black.
@@ -334,6 +334,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 
 		} else if ("hostGame".equals(arg0.getActionCommand()))
 		{
+			frame.setSize(600,340);
 			CardLayout cl = (CardLayout)(cards.getLayout());
 			cl.show(cards, slotChoiceTitle);
 		} else if ("backToMainMenu".equals(arg0.getActionCommand())) {

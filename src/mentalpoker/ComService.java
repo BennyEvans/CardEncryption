@@ -502,7 +502,7 @@ public class ComService {
 		// Grab the hoster
 		try {
 			String gameHostString = jgt.waitForInstructionsBuffer.take();
-			System.out.println("I woke up!");
+			//System.out.println("I woke up!");
 			boolean hostFoundAmongstGames = false;
 			for (User usr:availableGames)
 			{
@@ -516,7 +516,7 @@ public class ComService {
 				{
 					System.err.println("Host not found in available games.");
 				}
-				System.out.println("End of for loop");
+				//System.out.println("End of for loop");
 			}
 
 			//gameHost = availableGames.get(Integer.parseInt(br.readLine()));
