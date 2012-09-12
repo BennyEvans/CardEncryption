@@ -144,6 +144,9 @@ public class Poker {
 		//take requests to decrypt a hand
 		com.decryptEncryptedHands(rsaService, gameUsers.size()-1);
 		
+		
+		com.subscribeToUsersHaveHands();
+		
 		//choose random cards for each user
 		ArrayList<Integer> chosenCards = new ArrayList<Integer>();
 		Random rnd;
@@ -187,6 +190,8 @@ public class Poker {
 		
 		Hand hand = rsaService.decyrptHand(myHand);
 		
+		com.notifyHaveHand();
+		
 		
 		String card1 = Character.toString(hand.cards.get(0).cardType) + "-" + new String(hand.cards.get(0).suit);
 		String card2 = Character.toString(hand.cards.get(1).cardType) + "-" + new String(hand.cards.get(1).suit);
@@ -197,7 +202,12 @@ public class Poker {
 		
 		
 		//sit and block here until everyone has said gameover
-		Thread.sleep(2500);
+		if (!com.blockUntilUsersFinished()){
+			System.out.println("Timeout!");
+			com.stopDecryptingHands();
+			com.shutdown();
+			System.exit(0);
+		}
 		com.stopDecryptingHands();
 		com.shutdown();
 		return;
@@ -234,6 +244,13 @@ public class Poker {
 
 		
 		Hand hand = rsaService.decyrptHand(myHand);
+		
+		//subscribe to next lot of notification
+		
+		//notify have hand
+		com.notifyHaveHand();
+		
+		
 		String card1 = Character.toString(hand.cards.get(0).cardType) + "-" + new String(hand.cards.get(0).suit);
 		String card2 = Character.toString(hand.cards.get(1).cardType) + "-" + new String(hand.cards.get(1).suit);
 		System.out.println("My Cards: " + card1 + " " + card2);

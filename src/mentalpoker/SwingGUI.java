@@ -244,8 +244,6 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		joinGameGBConstraints.gridy = 1;
 		joinGameGBConstraints.gridheight = 1;
 		listModel = new DefaultListModel();
-		listModel.addElement("testingHost"); //DEBUG
-		listModel.addElement("testingHost2"); //DEBUG
 		gamesList = new JList(listModel);
 		gamesList.addListSelectionListener(this);
 		JScrollPane scrollPane = new JScrollPane(gamesList);

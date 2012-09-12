@@ -9,6 +9,7 @@ import java.io.ObjectInput;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -88,6 +89,9 @@ public class ComService {
 
 	private Subscription decryptSub;
 	private Subscription cheaterSub;
+	private Subscription waiterSub;
+	
+	private int usersDecryptedCards;
 
 	/** The not type. */
 	private static final String NOT_TYPE = "TYPE";
@@ -111,6 +115,7 @@ public class ComService {
 	private static final String SEND_ENCRYPTED_HAND = "sendEncHand";
 	private static final String CHEATER = "cheater";
 	private static final String SIGNATURE = "signature";
+	private static final String HAVE_MY_HAND = "havemyhand";
 
 	/** Cheat Reasons */
 	public static final int PUBLIC_KEY_CHANGED = 1;
@@ -1338,6 +1343,66 @@ public class ComService {
 			//do nothing
 		}
 		cheaterSub = null;
+	}
+	
+	public void subscribeToUsersHaveHands() throws InvalidSubscriptionException, IOException{
+		usersDecryptedCards = 0;
+		waiterSub = elvin.subscribe(NOT_TYPE + " == '" + HAVE_MY_HAND +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
+
+		waiterSub.addListener(new NotificationListener() {
+			public void notificationReceived(NotificationEvent e) {
+
+				String userid = e.notification.getString(SOURCE_USER);
+
+				User tmpUser = findUserByID(userid);
+
+				if (tmpUser == null){
+					//not in our list so return
+					return;
+				}
+
+				try {
+					if (sigServ.validateVerifiedSignature((byte[]) e.notification.get(SIGNATURE), tmpUser.getPublicKey())){
+						//signature validated so this is a real cheat notification
+						usersDecryptedCards++;
+						if (usersDecryptedCards >= currentGameMembers.size()){
+							//remove subscription and return
+							waiterSub.remove();
+							return;
+						}
+						
+					} else {
+						//call cheat
+					}
+				} catch (Exception e1) {
+					//call cheat
+				}
+			}
+		});
+
+		return;
+	}
+	
+	public boolean blockUntilUsersFinished() throws InterruptedException{
+		//30 second timeout
+		for (int timeout = 0; timeout < 150; timeout++){
+			if (usersDecryptedCards >= currentGameMembers.size()){
+				//return
+				System.out.println("Users all have their hands and are ready for the next stage!");
+				return true;
+			}
+			Thread.sleep(200);
+		}
+		return false;
+	}
+	
+	public void notifyHaveHand() throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, IOException{
+		Notification not = new Notification();
+		not.set(NOT_TYPE, HAVE_MY_HAND);
+		not.set(GAME_ID, gameHost.getID());
+		not.set(SOURCE_USER, user.getID());
+		not.set(SIGNATURE, sigServ.createVerifiedSignature());
+		elvin.send(not);
 	}
 
 
