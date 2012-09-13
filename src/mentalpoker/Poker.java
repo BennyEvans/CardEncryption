@@ -245,9 +245,18 @@ public class Poker {
 		
 		CommunityCards comCards = rsaService.decyrptComCards(encComCards);
 		System.out.println("Community Cards:");
+		//Provide the community cards back to the user
+		String cardsMessageSentBackToHost = "COMMUNITYCARDS_J1c20921098n08v290n8102v890n1203v";
+		
 		for (int i = 0; i < CommunityCards.NUM_CARDS; i++){
 			System.out.println(Character.toString(comCards.data.get(i).cardType) + "-" + new String(comCards.data.get(i).suit));
+			cardsMessageSentBackToHost = cardsMessageSentBackToHost.concat(" " + Character.toString(comCards.data.get(i).cardType) + "-" + new String(comCards.data.get(i).suit));
+			
 		}
+		
+		System.out.println("COMMUNITYCARDSSTRING " + cardsMessageSentBackToHost);
+		
+		hgt.publishDelegate(cardsMessageSentBackToHost);
 		
 		if (!com.blockUntilUsersFinished()){
 			System.out.println("Timeout!");
@@ -336,10 +345,12 @@ public class Poker {
 		
 		CommunityCards comCards = rsaService.decyrptComCards(encComCards);
 		System.out.println("Community Cards:");
+		String communityCardsToBeSentToJoiner = "";
 		for (int i = 0; i < CommunityCards.NUM_CARDS; i++){
+			communityCardsToBeSentToJoiner = communityCardsToBeSentToJoiner.concat(Character.toString(comCards.data.get(i).cardType) + "-" + new String(comCards.data.get(i).suit) + " ");
 			System.out.println(Character.toString(comCards.data.get(i).cardType) + "-" + new String(comCards.data.get(i).suit));
 		}
-		
+
 		//start listening for users hands
 		com.listenUsersHands();
 		
@@ -351,6 +362,8 @@ public class Poker {
 		//now broadcast you hand and wait for other hands
 		com.broadcastMyHand(gameUser);
 		com.blockUntilHaveUsersHands();
+		
+		jgt.waitForInstructionsBuffer.put(communityCardsToBeSentToJoiner);
 			
 		//determine winner and check their hand
 		

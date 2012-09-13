@@ -392,6 +392,10 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 				String card1 = jgt.waitForInstructionsBuffer.take();
 				String card2 = jgt.waitForInstructionsBuffer.take();
 				
+				String communityCardsUnSplit = 	jgt.waitForInstructionsBuffer.take();
+				String[] splitCommunityCards = communityCardsUnSplit.split(" ");
+				
+				
 				//Add the right cards to the screen
 				System.out.println(new java.io.File("").getAbsolutePath()+"src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card1+".png");
 				BufferedImage card1Picture = ImageIO.read(new File("src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card1+".png"));
@@ -404,6 +408,28 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 				cardScreenLayout.add(card1Label,cardScreenGBC);
 				cardScreenGBC.gridx = 1;
 				cardScreenLayout.add(card2Label,cardScreenGBC);	
+				
+				JLabel communityCardLabel = new JLabel("Community cards:");
+				cardScreenGBC.gridy = 2;
+				cardScreenGBC.gridwidth = 5;
+				cardScreenLayout.add(communityCardLabel,cardScreenGBC);	
+				cardScreenGBC.gridwidth = 1;
+
+				
+				for (int i = 0; i < splitCommunityCards.length; i++)
+				{
+					BufferedImage ccardPicture = null;
+					ccardPicture = ImageIO.read(new File("src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+splitCommunityCards[i]+".png"));
+					if (ccardPicture != null)
+					{
+						JLabel ccardLabel = new JLabel(new ImageIcon(ccardPicture));
+						cardScreenGBC.gridy = 3;
+						cardScreenGBC.gridx = i;
+						cardScreenLayout.add(ccardLabel,cardScreenGBC);
+					}
+					
+					
+				}
 				
 				//Now show the games screen
 				
@@ -496,11 +522,43 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 				}
 				
 				//Now show the games screen
-				frame.setSize(450,450);
-				CardLayout cl = (CardLayout)(cards.getLayout());
-				cl.show(cards, cardScreenTitle);
+				frame.setSize(1024,600);
+				//CardLayout cl = (CardLayout)(cards.getLayout());
+				//cl.show(cards, cardScreenTitle);
 			
 			
+			} else if (splitString[0].equals("COMMUNITYCARDS_J1c20921098n08v290n8102v890n1203v")) {
+				JLabel communityCardsLabel = new JLabel("Community cards:");
+				cardScreenGBC.gridy = 3;
+				cardScreenGBC.gridx = 0;
+				cardScreenGBC.gridwidth = 5;
+				cardScreenLayout.add(communityCardsLabel,cardScreenGBC);
+				
+				for (int i = 1; i < splitString.length; i++)
+				{
+					BufferedImage ccard1Image = null;
+					try {
+						ccard1Image = ImageIO.read(new File("src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+splitString[i]+".png"));
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					if (ccard1Image != null)
+					{
+						JLabel ccardLabel = new JLabel(new ImageIcon(ccard1Image));
+						cardScreenGBC.gridy = 4;
+						cardScreenGBC.gridx = i-1;
+						cardScreenGBC.gridwidth = 1;
+						cardScreenLayout.add(ccardLabel,cardScreenGBC);
+					} else {
+						System.err.println("ERROR FROM GUI: Card image is null!");
+						
+						
+					}
+					frame.setSize(1024,600);
+					CardLayout cl = (CardLayout)(cards.getLayout());
+					cl.show(cards, cardScreenTitle);
+					
+				}
 			}
 			
 			
