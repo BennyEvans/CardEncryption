@@ -90,7 +90,11 @@ public class ComService {
 	private Subscription cheaterSub;
 	private Subscription waiterSub;
 	
-	private int usersDecryptedCards;
+	private int usersHaveData;
+	
+	public static final int FINISHED_DEC_HAND = 1;
+	public static final int FINISHED_DEC_COM_CARDS = 2;
+	public static final int FINISHED_VERIFYING_COM_CARDS = 3;
 
 	/** The not type. */
 	private static final String NOT_TYPE = "TYPE";
@@ -119,12 +123,17 @@ public class ComService {
 	private static final String SIGNATURE = "signature";
 	private static final String HAVE_MY_HAND = "havemyhand";
 	private static final String COMMUNITY_CARDS = "comCards";
+	private static final String RAW_COMMUNITY_CARDS_BC = "rawComCardsbc";
+	private static final String RAW_COMMUNITY_CARDS = "rawComCards";
+	private static final String REQUEST_RAW_COMMUNITY_CARDS = "reqRawComCards";
+	private static final String RAW_COMMUNITY_CARDS_VERIFIED = "rawComCardsVerified";
 
 	/** Cheat Reasons */
 	public static final int PUBLIC_KEY_CHANGED = 1;
 	public static final int SIGNATURE_FAILED = 2;
 	public static final int USER_TABLE_SIGNATURE_FAILED = 3;
 	public static final int DECRYPT_REQUEST_ABUSE = 4;
+	public static final int COMMUNITY_CARDS_DIFFER = 5;
 	
 
 	/** The notification handle. */
@@ -1173,6 +1182,9 @@ public class ComService {
 						case USER_TABLE_SIGNATURE_FAILED:
 							System.out.println("Reason: The user table sent (with users in the game and their public keys) is reported to be altered. The signature failed.");
 							break;
+						case COMMUNITY_CARDS_DIFFER:
+							System.out.println("Reason: The community cards have been reported to be altered.");
+							break;
 						}
 					}
 				} catch (Exception e1) {
@@ -1209,6 +1221,9 @@ public class ComService {
 		case USER_TABLE_SIGNATURE_FAILED:
 			System.out.println("Reason: The user table sent (with users in the game and their public keys) has been altered. The signature failed.");
 			break;
+		case COMMUNITY_CARDS_DIFFER:
+			System.out.println("Reason: The community cards sent by the host are not what they should be.");
+			break;
 		}
 
 		Notification not = new Notification();
@@ -1233,9 +1248,17 @@ public class ComService {
 		cheaterSub = null;
 	}
 	
-	public void subscribeToUsersHaveHands() throws InvalidSubscriptionException, IOException{
-		usersDecryptedCards = 1;
-		waiterSub = elvin.subscribe(NOT_TYPE + " == '" + HAVE_MY_HAND +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
+	public void subscribeUsersFinished(int type) throws InvalidSubscriptionException, IOException{
+		usersHaveData = 1;
+		String tmp;
+		if (type == FINISHED_DEC_HAND){
+			tmp = HAVE_MY_HAND;
+		} else if (type == FINISHED_DEC_COM_CARDS){
+			tmp = REQUEST_RAW_COMMUNITY_CARDS;
+		} else {
+			tmp = RAW_COMMUNITY_CARDS_VERIFIED;
+		}
+		waiterSub = elvin.subscribe(NOT_TYPE + " == '" + tmp +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
 
 		waiterSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
@@ -1252,8 +1275,8 @@ public class ComService {
 				try {
 					if (sigServ.validateVerifiedSignature((byte[]) e.notification.get(SIGNATURE), tmpUser.getPublicKey())){
 						//signature validated so this is a real cheat notification
-						usersDecryptedCards++;
-						if (usersDecryptedCards >= currentGameMembers.size()){
+						usersHaveData++;
+						if (usersHaveData >= currentGameMembers.size()){
 							//remove subscription and return
 							waiterSub.remove();
 							return;
@@ -1271,21 +1294,18 @@ public class ComService {
 		return;
 	}
 	
-	public boolean blockUntilUsersFinished() throws InterruptedException{
+	public boolean blockUntilUsersFinished() throws InterruptedException, IOException{
 		//30 second timeout
 		for (int timeout = 0; timeout < 150; timeout++){
-			if (usersDecryptedCards >= currentGameMembers.size()){
+			if (usersHaveData >= currentGameMembers.size()){
 				//return
-				System.out.println("Users all have their hands and are ready for the next stage!");
+				waiterSub.remove();
 				return true;
 			}
 			Thread.sleep(200);
 		}
+		waiterSub.remove();
 		return false;
-	}
-	
-	public void broadcastCommunityCards(){
-		
 	}
 	
 	public void decryptCommunityCards(final RSAService rsaService, final int numRequests) throws InvalidSubscriptionException, IOException{
@@ -1471,14 +1491,87 @@ public class ComService {
 		return encryptedCommunityCards;
 	}
 	
-	public void sendRawCommunityDeck(){
+	
+	public void sendRawCommunityCards(final CommunityCards comCards) throws IOException, InterruptedException{
 		//wait for replys from user saying all good, i agree
+		subscribeUsersFinished(ComService.FINISHED_VERIFYING_COM_CARDS);
+		Notification not = new Notification();
+		not.set(NOT_TYPE, RAW_COMMUNITY_CARDS_BC);
+		not.set(GAME_ID, gameHost.getID());
+		not.set(RAW_COMMUNITY_CARDS, comCards.writeObject());
+		elvin.send(not);
+		if (!blockUntilUsersFinished()){
+			System.out.println("Timeout!");
+			shutdown();
+			System.exit(0);
+		}
+
 	}
 	
 	
-	public void listenForRawCommunityDeck(){
+	public void verifyCommunityCards(final CommunityCards myComCards) throws InvalidSubscriptionException, IOException, InterruptedException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException{
 		//when everyone has decrypted the community deck the host will broadcast the decrypted community deck
 		//if anyone disagrees with the deck they will call cheat else call all good
+		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + RAW_COMMUNITY_CARDS_BC +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
+		Notification not;
+
+		encSub.addListener(new NotificationListener() {
+			public void notificationReceived(NotificationEvent e) {
+
+				CommunityCards comCards;
+				byte[] tmpBytes = (byte[]) e.notification.get(RAW_COMMUNITY_CARDS);
+
+				try {
+					comCards = (CommunityCards) Passable.readObject(tmpBytes);
+					if (!sigServ.validateSignature(comCards, gameHost.getPublicKey())){
+						//sig failed!
+						callCheat(SIGNATURE_FAILED);
+						System.exit(0);
+					}
+					
+					//check the cards are the same as yours
+					for(int i = 0; i < CommunityCards.NUM_CARDS; i++){
+						if (comCards.data.get(i).cardType != myComCards.data.get(i).cardType
+								|| !comCards.data.get(i).suit.equals(myComCards.data.get(i).suit)){
+							callCheat(COMMUNITY_CARDS_DIFFER);
+						}
+					}
+
+					Notification not = new Notification();
+					not.set(NOT_TYPE, RAW_COMMUNITY_CARDS_VERIFIED);
+					not.set(GAME_ID, gameHost.getID());
+					not.set(SOURCE_USER, user.getID());
+					not.set(SIGNATURE, sigServ.createVerifiedSignature());
+					
+					elvin.send(not);
+
+				} catch (Exception e1) {
+					shutdown();
+					System.exit(0);
+				}
+
+				synchronized (encSub) {
+					encSub.notify();
+				}
+
+
+			}
+		});
+
+		not = new Notification();
+		not.set(NOT_TYPE, REQUEST_RAW_COMMUNITY_CARDS);
+		not.set(GAME_ID, gameHost.getID());
+		not.set(SOURCE_USER, user.getID());
+		not.set(SIGNATURE, sigServ.createVerifiedSignature());
+
+		synchronized (encSub) {
+			elvin.send(not);
+			//wait until received reply
+			encSub.wait();
+		}
+
+		encSub.remove();
+
 	}
 	
 	public void listenForWinner(){

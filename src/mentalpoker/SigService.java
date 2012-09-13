@@ -51,6 +51,7 @@ public class SigService {
 	
 	/**
 	 * Creates a signature.
+	 * @param <E>
 	 *
 	 * @param <E> the element type
 	 * @param toSign the to sign
@@ -60,7 +61,7 @@ public class SigService {
 	 * @throws BadPaddingException the bad padding exception
 	 * @throws NoSuchAlgorithmException the no such algorithm exception
 	 */
-	public void createSignature(Passable toSign) throws UnsupportedEncodingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException{
+	public <E> void createSignature(Passable<E> toSign) throws UnsupportedEncodingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException{
 
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		ObjectOutput out = null;
@@ -123,7 +124,7 @@ public class SigService {
 	 * @return true, if successful
 	 * @throws NoSuchAlgorithmException the no such algorithm exception
 	 */
-	public boolean validateSignature(Passable sig, PublicKey pKey) throws NoSuchAlgorithmException {
+	public <E> boolean validateSignature(Passable<E> sig, PublicKey pKey) throws NoSuchAlgorithmException {
 
 
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();

@@ -13,13 +13,13 @@ import java.util.ArrayList;
  * The Class Passable.
  *
  */
-public class Passable implements java.io.Serializable {
+public class Passable<E> implements java.io.Serializable {
 
 	/** The Constant serialVersionUID. */
 	private static final long serialVersionUID = 3090666232050760788L;
 	
 	/** The data. */
-	public ArrayList<EncryptedCard> data = new ArrayList<EncryptedCard>();
+	public ArrayList<E> data = new ArrayList<E>();
 	
 	/** The signature. */
 	public byte[] signature;
@@ -36,12 +36,12 @@ public class Passable implements java.io.Serializable {
 		return tmpBytes;
 	}
 	
-	public static Passable readObject(byte[] tmpBytes) throws IOException, ClassNotFoundException{
-		Passable ret;
+	public static Passable<?> readObject(byte[] tmpBytes) throws IOException, ClassNotFoundException{
+		Passable<?> ret;
 		ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
 		ObjectInput in;
 		in = new ObjectInputStream(bis);
-		ret = (Passable) in.readObject(); 
+		ret = (Passable<?>) in.readObject(); 
 		bis.close();
 		in.close();
 		return ret;

@@ -1,10 +1,13 @@
 package mentalpoker;
 
-import java.util.ArrayList;
+public class CommunityCards extends Passable<Card> implements java.io.Serializable{
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -2193882695361337434L;
 
-public class CommunityCards {
 	
 	public final static int NUM_CARDS = 5;
 	
-	public ArrayList<Card> cards = new ArrayList<Card>();
 }

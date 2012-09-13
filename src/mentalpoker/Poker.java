@@ -107,6 +107,7 @@ public class Poker {
 		EncryptedDeck encDeck = null;
 		RSAService rsaService = new RSAService();
 		EncryptedHand myHand = null;
+		EncryptedHand originalHand = null;
 		EncryptedCommunityCards encComCards;
 
 		//broadcast p and q
@@ -144,7 +145,7 @@ public class Poker {
 		com.decryptEncryptedHands(rsaService, gameUsers.size()-1);
 		
 		
-		com.subscribeToUsersHaveHands();
+		com.subscribeUsersFinished(ComService.FINISHED_DEC_HAND);
 		
 		//choose random cards for each user
 		ArrayList<Integer> chosenCards = new ArrayList<Integer>();
@@ -170,6 +171,7 @@ public class Poker {
 				System.out.println("Got my cards!");
 				//these are my cards
 				myHand = hand;
+				originalHand = hand;
 			} else {
 				sig.createSignature(hand);
 				com.sendEncryptedHand(tmpUser, hand);
@@ -224,6 +226,7 @@ public class Poker {
 		
 		//subscribe to next lot of notifications
 		com.decryptCommunityCards(rsaService, gameUsers.size()-1);
+		com.subscribeUsersFinished(ComService.FINISHED_DEC_COM_CARDS);
 		
 		//send out community cards
 		com.sendEncryptedComCards(encComCards);
@@ -241,8 +244,23 @@ public class Poker {
 		CommunityCards comCards = rsaService.decyrptComCards(encComCards);
 		System.out.println("Community Cards:");
 		for (int i = 0; i < CommunityCards.NUM_CARDS; i++){
-			System.out.println(Character.toString(comCards.cards.get(i).cardType) + "-" + new String(comCards.cards.get(i).suit));
+			System.out.println(Character.toString(comCards.data.get(i).cardType) + "-" + new String(comCards.data.get(i).suit));
 		}
+		
+		if (!com.blockUntilUsersFinished()){
+			System.out.println("Timeout!");
+			com.shutdown();
+			System.exit(0);
+		}
+		
+		//send out the community cards
+		sig.createSignature(comCards);
+		System.out.println("Sending Raw Community cards!");
+		com.sendRawCommunityCards(comCards);
+		System.out.println("Users all agreed with community cards!");
+		
+		//now everyone is to broadcast their plaintext hand with their original (fully encrypted) hand
+		
 		
 		Thread.sleep(2500);
 		com.shutdown();
@@ -250,9 +268,11 @@ public class Poker {
 	}
 	
 	
+	
 	public void playGameAsPlayer(ArrayList<User> gameUsers, SearchGamesTask jgt) throws InvalidSubscriptionException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException, InterruptedException, IOException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
 		RSAService rsaService = com.waitPQ();
 		EncryptedHand myHand;
+		EncryptedHand originalHand = null;
 		EncryptedCommunityCards encComCards;
 		
 		PublicKey gameHostsPubKey = gameUsers.get(gameUsers.size()-1).getPublicKey();
@@ -266,6 +286,7 @@ public class Poker {
 		
 		//wait for cards
 		myHand = com.waitEncryptedHand();
+		originalHand = myHand;
 		
 		System.out.println("Got my cards!");
 		
@@ -307,10 +328,15 @@ public class Poker {
 		CommunityCards comCards = rsaService.decyrptComCards(encComCards);
 		System.out.println("Community Cards:");
 		for (int i = 0; i < CommunityCards.NUM_CARDS; i++){
-			System.out.println(Character.toString(comCards.cards.get(i).cardType) + "-" + new String(comCards.cards.get(i).suit));
+			System.out.println(Character.toString(comCards.data.get(i).cardType) + "-" + new String(comCards.data.get(i).suit));
 		}
 		
-		//broadcast the community deck
+		//broadcast the community cards
+		System.out.println("Verifying community cards!");
+		com.verifyCommunityCards(comCards);
+		System.out.println("Community cards verified!");
+		
+		//now everyone is to broadcast their plaintext hand with their original (fully encrypted) hand
 		
 		//sit and block here until everyone has said gameover
 		Thread.sleep(2500);
@@ -353,25 +379,10 @@ public class Poker {
 	 * @param args the arguments
 	 */
 	public static void main(String[] args) {
-		
-    	/*
-    	 * This stuff is disabled for the moment because it includes its own loops.
-    	 */
-		/*
-		try {
-		    sig = new SigService();
-    		new Poker();
-    	} catch (Exception e) {
-    		// TODO Auto-generated catch block
-    		e.printStackTrace();
-    	}
-		System.exit(0);
-		*/
-		
+
 		try {
 			sig = new SigService();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			System.exit(0);
 		}

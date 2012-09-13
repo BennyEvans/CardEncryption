@@ -1,6 +1,6 @@
 package mentalpoker;
 
-public class EncryptedHand extends Passable implements java.io.Serializable {
+public class EncryptedHand extends Passable<EncryptedCard> implements java.io.Serializable {
 	
 	/**
 	 * 
