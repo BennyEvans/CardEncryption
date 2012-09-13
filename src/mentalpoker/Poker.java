@@ -107,6 +107,7 @@ public class Poker {
 		EncryptedDeck encDeck = null;
 		RSAService rsaService = new RSAService();
 		EncryptedHand myHand = null;
+		EncryptedCommunityCards encComCards;
 
 		//broadcast p and q
 		com.broadcastPQ(rsaService.getP(), rsaService.getQ(), gameUsers.size());
@@ -175,6 +176,24 @@ public class Poker {
 			}
 		}
 		
+		//choose 5 random cards as the community cards
+		int count = 0;
+		rnd = new Random();
+		encComCards = new EncryptedCommunityCards();
+		Integer tmpInt = new Integer(rnd.nextInt(Deck.NUM_CARDS - 1));
+
+		while (count < CommunityCards.NUM_CARDS){
+			while (chosenCards.contains(tmpInt)){
+				tmpInt = new Integer(rnd.nextInt(Deck.NUM_CARDS - 1));
+			}
+			chosenCards.add(tmpInt);
+			encComCards.data.add(encDeck.data.get(tmpInt));
+			count++;
+		}
+		//sign the cards
+		sig.createSignature(encComCards);
+		
+		
 		System.out.println("Every user has their cards now!");
 		
 		for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
@@ -188,9 +207,6 @@ public class Poker {
 		
 		Hand hand = rsaService.decyrptHand(myHand);
 		
-		com.notifyHaveHand();
-		
-		
 		String card1 = Character.toString(hand.cards.get(0).cardType) + "-" + new String(hand.cards.get(0).suit);
 		String card2 = Character.toString(hand.cards.get(1).cardType) + "-" + new String(hand.cards.get(1).suit);
 		System.out.println("My Cards: " + card1 + " " + card2);
@@ -199,14 +215,36 @@ public class Poker {
 		hgt.publishDelegate("HAVECARDS1c2n90801280c498n12904c80912c490102984nc1 " + card1 + " " + card2);
 		
 		
-		//sit and block here until everyone has said gameover
+		//sit and block here until everyone has their plaintext cards
 		if (!com.blockUntilUsersFinished()){
 			System.out.println("Timeout!");
-			com.stopDecryptingHands();
 			com.shutdown();
 			System.exit(0);
 		}
-		com.stopDecryptingHands();
+		
+		//subscribe to next lot of notifications
+		com.decryptCommunityCards(rsaService, gameUsers.size()-1);
+		
+		//send out community cards
+		com.sendEncryptedComCards(encComCards);
+		//System.out.println(new String(encComCards.data.get(0).cardData));
+		
+		for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
+			User tmpUser = usr.next();
+			if (!tmpUser.getID().equals(gameUser.getID())){
+				sig.createSignature(encComCards);
+				encComCards = com.requestDecryptComCards(encComCards, tmpUser);
+			}
+			
+		}
+		
+		CommunityCards comCards = rsaService.decyrptComCards(encComCards);
+		System.out.println("Community Cards:");
+		for (int i = 0; i < CommunityCards.NUM_CARDS; i++){
+			System.out.println(Character.toString(comCards.cards.get(i).cardType) + "-" + new String(comCards.cards.get(i).suit));
+		}
+		
+		Thread.sleep(2500);
 		com.shutdown();
 		return;
 	}
@@ -215,6 +253,7 @@ public class Poker {
 	public void playGameAsPlayer(ArrayList<User> gameUsers, SearchGamesTask jgt) throws InvalidSubscriptionException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException, InterruptedException, IOException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
 		RSAService rsaService = com.waitPQ();
 		EncryptedHand myHand;
+		EncryptedCommunityCards encComCards;
 		
 		PublicKey gameHostsPubKey = gameUsers.get(gameUsers.size()-1).getPublicKey();
 
@@ -226,7 +265,7 @@ public class Poker {
 		System.out.println("Got encrypted deck and encrypted again with my key.");
 		
 		//wait for cards
-		myHand = com.waitEncryptedHand(gameHostsPubKey);
+		myHand = com.waitEncryptedHand();
 		
 		System.out.println("Got my cards!");
 		
@@ -239,15 +278,7 @@ public class Poker {
 			
 		}
 		
-
-		
 		Hand hand = rsaService.decyrptHand(myHand);
-		
-		//subscribe to next lot of notification
-		
-		//notify have hand
-		com.notifyHaveHand();
-		
 		
 		String card1 = Character.toString(hand.cards.get(0).cardType) + "-" + new String(hand.cards.get(0).suit);
 		String card2 = Character.toString(hand.cards.get(1).cardType) + "-" + new String(hand.cards.get(1).suit);
@@ -256,9 +287,33 @@ public class Poker {
 		jgt.waitForInstructionsBuffer.put(card1);
 		jgt.waitForInstructionsBuffer.put(card2);
 		
+		
+		//subscribe to next lot of notification
+		com.decryptCommunityCards(rsaService, gameUsers.size()-1);
+		
+		//notify have hand and wait for community cards
+		encComCards = com.listenForCommunityCards();
+		
+		//start decrypting the community cards
+		for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
+			User tmpUser = usr.next();
+			if (!tmpUser.getID().equals(gameUser.getID())){
+				sig.createSignature(encComCards);
+				encComCards = com.requestDecryptComCards(encComCards, tmpUser);
+			}
+			
+		}
+		
+		CommunityCards comCards = rsaService.decyrptComCards(encComCards);
+		System.out.println("Community Cards:");
+		for (int i = 0; i < CommunityCards.NUM_CARDS; i++){
+			System.out.println(Character.toString(comCards.cards.get(i).cardType) + "-" + new String(comCards.cards.get(i).suit));
+		}
+		
+		//broadcast the community deck
+		
 		//sit and block here until everyone has said gameover
 		Thread.sleep(2500);
-		com.stopDecryptingHands();
 		com.shutdown();
 		return;
 	}

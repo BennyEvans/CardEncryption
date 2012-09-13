@@ -13,21 +13,12 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 import javax.imageio.ImageIO;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
@@ -41,13 +32,11 @@ import javax.swing.JPanel;
 import javax.swing.JRootPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
-import org.avis.client.InvalidSubscriptionException;
 
 public class SwingGUI extends JPanel implements ActionListener, ListSelectionListener {
 
@@ -403,19 +392,18 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 				String card1 = jgt.waitForInstructionsBuffer.take();
 				String card2 = jgt.waitForInstructionsBuffer.take();
 				
-				System.out.println("From inside searchgamestask: " + card1 + card2);
-				
 				//Add the right cards to the screen
 				System.out.println(new java.io.File("").getAbsolutePath()+"src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card1+".png");
 				BufferedImage card1Picture = ImageIO.read(new File("src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card1+".png"));
 				BufferedImage card2Picture = ImageIO.read(new File("src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card2+".png"));
+				
 				JLabel card1Label = new JLabel(new ImageIcon(card1Picture));
 				JLabel card2Label = new JLabel(new ImageIcon(card2Picture));
+				
 				cardScreenGBC.gridy = 1;
 				cardScreenLayout.add(card1Label,cardScreenGBC);
 				cardScreenGBC.gridx = 1;
-				cardScreenLayout.add(card2Label,cardScreenGBC);
-				
+				cardScreenLayout.add(card2Label,cardScreenGBC);	
 				
 				//Now show the games screen
 				
@@ -467,7 +455,6 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		@Override
 		protected void process(List<String> messages) {
 			String latestMessage = messages.get(messages.size()-1);
-			System.out.println("Received message: " + latestMessage);
 			String[] splitString = latestMessage.split(" ");
 			
 			if (splitString[0].equals("Now"))

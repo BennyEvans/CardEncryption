@@ -333,6 +333,25 @@ public class RSAService {
 		return ret;
 	}
 	
+	
+	public EncryptedCommunityCards decyrptEncComCards(EncryptedCommunityCards cards) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+		EncryptedCommunityCards ret = new EncryptedCommunityCards();
+		for (int i = 0; i < CommunityCards.NUM_CARDS; i++){
+			EncryptedCard tmp = cards.data.get(i);
+			ret.data.add(decryptEncCard(tmp));
+		}
+		return ret;
+	}
+	
+	public CommunityCards decyrptComCards(EncryptedCommunityCards cards) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+		CommunityCards ret = new CommunityCards();
+		for (int i = 0; i < CommunityCards.NUM_CARDS; i++){
+			EncryptedCard tmp = cards.data.get(i);
+			ret.cards.add(decryptCard(tmp));
+		}
+		return ret;
+	}
+	
 	/**
 	 * Encrypt deck.
 	 *

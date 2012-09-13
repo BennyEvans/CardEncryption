@@ -77,10 +77,16 @@ public class ComService {
 	private final byte[] sigPublicKey;
 
 	private int decryptionCount;
+	private int comDecryptionCount;
 
+	
+	//only used for return values
 	private EncryptedHand encryptedHand;
+	
+	private EncryptedCommunityCards encryptedCommunityCards;
 
 	private Subscription decryptSub;
+	private Subscription decryptComSub;
 	private Subscription cheaterSub;
 	private Subscription waiterSub;
 	
@@ -93,6 +99,7 @@ public class ComService {
 	private static final String ENCRYPT_DECK_REPLY = "encDRep";
 	private static final String ENCRYPTED_DECK = "encDeck";
 	private static final String ENCRYPTED_HAND = "encHand";
+	private static final String ENCRYPTED_COM_CARDS = "encComCards";
 	private static final String REQ_USER = "userRequested";
 	private static final String JOIN_GAME = "newGameResponse";
 	private static final String NEW_GAME = "newGame";
@@ -104,11 +111,14 @@ public class ComService {
 	private static final String PUB_KEY = "pubkkey";
 	private static final String DECRYPT_HAND_REQUEST = "dechandreq";
 	private static final String DECRYPT_HAND_REPLY = "dechandrep";
+	private static final String DECRYPT_COM_CARDS_REQUEST = "deccomcardsreq";
+	private static final String DECRYPT_COM_CARDS_REPLY = "deccomcardsrep";
 	private static final String SOURCE_USER = "userSource";
 	private static final String SEND_ENCRYPTED_HAND = "sendEncHand";
 	private static final String CHEATER = "cheater";
 	private static final String SIGNATURE = "signature";
 	private static final String HAVE_MY_HAND = "havemyhand";
+	private static final String COMMUNITY_CARDS = "comCards";
 
 	/** Cheat Reasons */
 	public static final int PUBLIC_KEY_CHANGED = 1;
@@ -231,7 +241,7 @@ public class ComService {
 	 * Shutdown.
 	 */
 	public void shutdown(){
-		stopDecryptingHands();
+		stopDecrypting();
 		stopListeningForCheaters();
 		elvin.close();
 	}
@@ -924,7 +934,7 @@ public class ComService {
 	 * @throws InvalidSubscriptionException 
 	 * @throws InterruptedException 
 	 */
-	public EncryptedHand waitEncryptedHand(final PublicKey pKey) throws InvalidSubscriptionException, IOException, InterruptedException{
+	public EncryptedHand waitEncryptedHand() throws InvalidSubscriptionException, IOException, InterruptedException{
 		final Subscription eSub = elvin.subscribe(NOT_TYPE + " == '" + SEND_ENCRYPTED_HAND +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
 		encryptedHand = null;
 		System.out.println("Waiting for encrypted hand - " + new String(user.getID()));
@@ -938,7 +948,7 @@ public class ComService {
 
 				try {
 					encryptedHand = (EncryptedHand) Passable.readObject(tmpBytes);
-					if (!sigServ.validateSignature(encryptedHand, pKey)){
+					if (!sigServ.validateSignature(encryptedHand, gameHost.getPublicKey())){
 						//sig failed!
 						callCheat(SIGNATURE_FAILED);
 					}
@@ -1037,13 +1047,20 @@ public class ComService {
 		return;
 	}
 
-	public void stopDecryptingHands(){
+	public void stopDecrypting(){
 		try{
 			decryptSub.remove();
 		} catch (Exception e){
 			//do nothing
 		}
 		decryptSub = null;
+		
+		try{
+			decryptComSub.remove();
+		} catch (Exception e){
+			//do nothing
+		}
+		decryptComSub = null;
 	}
 
 	public EncryptedHand requestDecryptHand(EncryptedHand encHand, final User usr) throws InvalidSubscriptionException, IOException, InterruptedException{
@@ -1217,7 +1234,7 @@ public class ComService {
 	}
 	
 	public void subscribeToUsersHaveHands() throws InvalidSubscriptionException, IOException{
-		usersDecryptedCards = 0;
+		usersDecryptedCards = 1;
 		waiterSub = elvin.subscribe(NOT_TYPE + " == '" + HAVE_MY_HAND +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
 
 		waiterSub.addListener(new NotificationListener() {
@@ -1267,13 +1284,209 @@ public class ComService {
 		return false;
 	}
 	
-	public void notifyHaveHand() throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, IOException{
-		Notification not = new Notification();
+	public void broadcastCommunityCards(){
+		
+	}
+	
+	public void decryptCommunityCards(final RSAService rsaService, final int numRequests) throws InvalidSubscriptionException, IOException{
+		comDecryptionCount = 0;
+		decryptComSub = elvin.subscribe(NOT_TYPE + " == '" + DECRYPT_COM_CARDS_REQUEST +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
+
+		decryptComSub.addListener(new NotificationListener() {
+			public void notificationReceived(NotificationEvent e) {
+
+				System.out.println("Got decrypt com request.");
+				EncryptedCommunityCards encComCards = null;
+				Notification not;
+				
+				User userRequesting = findUserByID(e.notification.getString(SOURCE_USER));
+
+				if (userRequesting == null){
+					return;
+				}
+
+				comDecryptionCount++;
+				if (comDecryptionCount > numRequests){
+					//more decryption requests than expected... someone is trying to cheat
+					try {
+						callCheat(DECRYPT_REQUEST_ABUSE);
+					} catch (Exception e1) {
+						shutdown();
+						System.exit(-1);
+					}
+				}
+
+				byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_COM_CARDS);
+
+				try {
+					encComCards = (EncryptedCommunityCards) Passable.readObject(tmpBytes);
+					if (!sigServ.validateSignature(encComCards, userRequesting.getPublicKey())){
+						//sig failed!
+						callCheat(SIGNATURE_FAILED);
+						System.exit(0);
+					}
+					//decrypt and sign
+					encComCards = rsaService.decyrptEncComCards(encComCards);
+					sigServ.createSignature(encComCards);
+				} catch (Exception e1) {
+					shutdown();
+					System.exit(0);
+				}
+
+				not = new Notification();
+				not.set(NOT_TYPE, DECRYPT_COM_CARDS_REPLY);
+				not.set(GAME_ID, gameHost.getID());
+				not.set(REQ_USER, userRequesting.getID());
+				try {
+					not.set(ENCRYPTED_COM_CARDS, encComCards.writeObject());
+					elvin.send(not);
+				} catch (IOException e1) {
+					shutdown();
+					System.exit(1);
+				}
+				
+				System.out.println("Finished decryption request");
+			}
+		});
+
+		return;
+	}
+	
+	
+	public EncryptedCommunityCards listenForCommunityCards() throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, InvalidSubscriptionException, IOException, InterruptedException{
+		
+		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + COMMUNITY_CARDS +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
+		Notification not;
+
+		encSub.addListener(new NotificationListener() {
+			public void notificationReceived(NotificationEvent e) {
+
+				byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_COM_CARDS);
+
+				try {
+					encryptedCommunityCards = (EncryptedCommunityCards) Passable.readObject(tmpBytes);
+					if (!sigServ.validateSignature(encryptedCommunityCards, gameHost.getPublicKey())){
+						//sig failed!
+						callCheat(SIGNATURE_FAILED);
+						System.exit(0);
+					}
+				} catch (Exception e1) {
+					shutdown();
+					System.exit(0);
+				}
+
+				synchronized (encSub) {
+					encSub.notify();
+				}
+
+
+			}
+		});
+
+		not = new Notification();
 		not.set(NOT_TYPE, HAVE_MY_HAND);
 		not.set(GAME_ID, gameHost.getID());
 		not.set(SOURCE_USER, user.getID());
 		not.set(SIGNATURE, sigServ.createVerifiedSignature());
+
+		synchronized (encSub) {
+			elvin.send(not);
+			//wait until received reply
+			encSub.wait();
+		}
+
+		encSub.remove();
+		System.out.println("Got Community Cards!");
+		//System.out.println(new String(encryptedCommunityCards.data.get(0).cardData));
+
+		return encryptedCommunityCards;
+		
+	}
+	
+	public void sendEncryptedComCards(EncryptedCommunityCards cards) throws IOException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException{
+		Notification not = new Notification();
+
+		System.out.println("Sending encrypted comcards!");
+
+		not.set(NOT_TYPE, COMMUNITY_CARDS);
+		not.set(GAME_ID, gameHost.getID());
+		not.set(ENCRYPTED_COM_CARDS, cards.writeObject());
+
 		elvin.send(not);
+
+		return;
+	}
+	
+	
+	public EncryptedCommunityCards requestDecryptComCards(EncryptedCommunityCards encComCards, final User usr) throws InvalidSubscriptionException, IOException, InterruptedException{
+
+
+		final Subscription encSub = elvin.subscribe(NOT_TYPE + " == '" + DECRYPT_COM_CARDS_REPLY +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
+		Notification not;
+		encryptedHand = null;
+
+		encSub.addListener(new NotificationListener() {
+			public void notificationReceived(NotificationEvent e) {
+
+				System.out.println("Got reply from requesting user to decrypt com cards.");
+
+				byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_COM_CARDS);
+
+				try {
+					encryptedCommunityCards = (EncryptedCommunityCards) Passable.readObject(tmpBytes);
+					if (!sigServ.validateSignature(encryptedCommunityCards, usr.getPublicKey())){
+						//sig failed!
+						callCheat(SIGNATURE_FAILED);
+						System.exit(0);
+					}
+				} catch (Exception e1) {
+					shutdown();
+					System.exit(0);
+				}
+
+				synchronized (encSub) {
+					encSub.notify();
+				}
+
+
+			}
+		});
+
+
+		not = new Notification();
+		not.set(NOT_TYPE, DECRYPT_COM_CARDS_REQUEST);
+		not.set(GAME_ID, gameHost.getID());
+		not.set(SOURCE_USER, user.getID());
+		not.set(REQ_USER, usr.getID());
+		not.set(ENCRYPTED_COM_CARDS, encComCards.writeObject());
+
+		synchronized (encSub) {
+			elvin.send(not);
+			//wait until received reply
+			encSub.wait();
+		}
+
+		encSub.remove();
+
+		return encryptedCommunityCards;
+	}
+	
+	public void sendRawCommunityDeck(){
+		//wait for replys from user saying all good, i agree
+	}
+	
+	
+	public void listenForRawCommunityDeck(){
+		//when everyone has decrypted the community deck the host will broadcast the decrypted community deck
+		//if anyone disagrees with the deck they will call cheat else call all good
+	}
+	
+	public void listenForWinner(){
+		//send out plaintext cards with fully encrypted cards
+		//wait for every users cards and determine the winner
+		//validate users cards by asking the winner for his/her decryption key and running the process of fully decrypting
+		//their cards - your encryption is in this so it can't be spoofed
+		
 	}
 
 
