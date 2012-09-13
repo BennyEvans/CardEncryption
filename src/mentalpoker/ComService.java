@@ -1574,13 +1574,28 @@ public class ComService {
 
 	}
 	
-	public void listenForWinner(){
+	
+	public void listenUsersHands(){
+		
+	}
+	
+	//send the whole user instance because it has all your details
+	public void broadcastMyHand(User usr){
+		
+	}
+	
+	//return the users id, name, cards and 
+	public ArrayList<User> blockUntilHaveUsersHands(){
+		return null;
+	}
+	
+	//public void listenForWinner(){
 		//send out plaintext cards with fully encrypted cards
 		//wait for every users cards and determine the winner
 		//validate users cards by asking the winner for his/her decryption key and running the process of fully decrypting
 		//their cards - your encryption is in this so it can't be spoofed
 		
-	}
+	//}
 
 
 }

@@ -106,8 +106,9 @@ public class Poker {
 	public void playGameAsHost(ArrayList<User> gameUsers, HostGameTask hgt) throws IOException, InterruptedException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException{
 		EncryptedDeck encDeck = null;
 		RSAService rsaService = new RSAService();
+		gameUser.setDecryptionKey(rsaService.getD());
 		EncryptedHand myHand = null;
-		EncryptedHand originalHand = null;
+		//EncryptedHand originalHand = null;
 		EncryptedCommunityCards encComCards;
 
 		//broadcast p and q
@@ -171,7 +172,7 @@ public class Poker {
 				System.out.println("Got my cards!");
 				//these are my cards
 				myHand = hand;
-				originalHand = hand;
+				gameUser.setUsersOriginalHand(hand);
 			} else {
 				sig.createSignature(hand);
 				com.sendEncryptedHand(tmpUser, hand);
@@ -208,9 +209,10 @@ public class Poker {
 		}
 		
 		Hand hand = rsaService.decyrptHand(myHand);
+		gameUser.setUsersHand(hand);
 		
-		String card1 = Character.toString(hand.cards.get(0).cardType) + "-" + new String(hand.cards.get(0).suit);
-		String card2 = Character.toString(hand.cards.get(1).cardType) + "-" + new String(hand.cards.get(1).suit);
+		String card1 = Character.toString(hand.data.get(0).cardType) + "-" + new String(hand.data.get(0).suit);
+		String card2 = Character.toString(hand.data.get(1).cardType) + "-" + new String(hand.data.get(1).suit);
 		System.out.println("My Cards: " + card1 + " " + card2);
 		
 		//Provide the cards back to the user.
@@ -253,14 +255,20 @@ public class Poker {
 			System.exit(0);
 		}
 		
+		//start listening for users hands
+		com.listenUsersHands();
+		
 		//send out the community cards
 		sig.createSignature(comCards);
 		System.out.println("Sending Raw Community cards!");
 		com.sendRawCommunityCards(comCards);
 		System.out.println("Users all agreed with community cards!");
 		
-		//now everyone is to broadcast their plaintext hand with their original (fully encrypted) hand
+		//now broadcast you hand and wait for other hands
+		com.broadcastMyHand(gameUser);
+		com.blockUntilHaveUsersHands();
 		
+		//determine winner and check their hand
 		
 		Thread.sleep(2500);
 		com.shutdown();
@@ -271,8 +279,8 @@ public class Poker {
 	
 	public void playGameAsPlayer(ArrayList<User> gameUsers, SearchGamesTask jgt) throws InvalidSubscriptionException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException, InterruptedException, IOException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
 		RSAService rsaService = com.waitPQ();
+		gameUser.setDecryptionKey(rsaService.getD());
 		EncryptedHand myHand;
-		EncryptedHand originalHand = null;
 		EncryptedCommunityCards encComCards;
 		
 		PublicKey gameHostsPubKey = gameUsers.get(gameUsers.size()-1).getPublicKey();
@@ -286,7 +294,7 @@ public class Poker {
 		
 		//wait for cards
 		myHand = com.waitEncryptedHand();
-		originalHand = myHand;
+		gameUser.setUsersOriginalHand(myHand);
 		
 		System.out.println("Got my cards!");
 		
@@ -300,9 +308,10 @@ public class Poker {
 		}
 		
 		Hand hand = rsaService.decyrptHand(myHand);
+		gameUser.setUsersHand(hand);
 		
-		String card1 = Character.toString(hand.cards.get(0).cardType) + "-" + new String(hand.cards.get(0).suit);
-		String card2 = Character.toString(hand.cards.get(1).cardType) + "-" + new String(hand.cards.get(1).suit);
+		String card1 = Character.toString(hand.data.get(0).cardType) + "-" + new String(hand.data.get(0).suit);
+		String card2 = Character.toString(hand.data.get(1).cardType) + "-" + new String(hand.data.get(1).suit);
 		System.out.println("My Cards: " + card1 + " " + card2);
 		
 		jgt.waitForInstructionsBuffer.put(card1);
@@ -331,12 +340,19 @@ public class Poker {
 			System.out.println(Character.toString(comCards.data.get(i).cardType) + "-" + new String(comCards.data.get(i).suit));
 		}
 		
-		//broadcast the community cards
+		//start listening for users hands
+		com.listenUsersHands();
+		
+		//verify community cards
 		System.out.println("Verifying community cards!");
 		com.verifyCommunityCards(comCards);
 		System.out.println("Community cards verified!");
 		
-		//now everyone is to broadcast their plaintext hand with their original (fully encrypted) hand
+		//now broadcast you hand and wait for other hands
+		com.broadcastMyHand(gameUser);
+		com.blockUntilHaveUsersHands();
+			
+		//determine winner and check their hand
 		
 		//sit and block here until everyone has said gameover
 		Thread.sleep(2500);

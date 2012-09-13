@@ -14,6 +14,11 @@ public class User implements java.io.Serializable{
 	private String id;
 	private BigInteger decryptionKey;
 	private PublicKey pubKey;
+	private Hand usersHand;
+	private EncryptedHand usersOriginalHand;
+	
+	/** The signature. */
+	public byte[] signature;
 	
 	/**
 	 * Instantiates a new user.
@@ -71,6 +76,22 @@ public class User implements java.io.Serializable{
 	
 	public PublicKey getPublicKey(){
 		return pubKey;
+	}
+	
+	public Hand getUsersHand(){
+		return usersHand;
+	}
+	
+	public EncryptedHand getUsersOriginalHand(){
+		return usersOriginalHand;
+	}
+	
+	public void setUsersHand(Hand hand){
+		usersHand = hand;
+	}
+	
+	public void setUsersOriginalHand(EncryptedHand hand){
+		usersOriginalHand = hand;
 	}
 
 }

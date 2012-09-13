@@ -136,6 +136,10 @@ public class RSAService {
 		return new BigInteger(this.q.toString());
 	}
 	
+	public BigInteger getD(){
+		return new BigInteger(this.d.toString());
+	}
+	
 	
 	/**
 	 * Generates a prime.
@@ -306,7 +310,6 @@ public class RSAService {
 			System.err.println("Cannot encrypt when using decrypting constructor RSAService(gp, gq, gd)");
 			return null;
 		}
-		encDeck.usersEncrypted.add(usr);
 		for (int i = 0; i < Deck.NUM_CARDS; i++){
 			EncryptedCard tmp = encDeck.data.get(i);
 			encDeck.data.set(i, encryptEncCard(tmp));
@@ -328,7 +331,7 @@ public class RSAService {
 		Hand ret = new Hand();
 		for (int i = 0; i < Hand.NUM_CARDS; i++){
 			EncryptedCard tmp = hand.data.get(i);
-			ret.cards.add(decryptCard(tmp));
+			ret.data.add(decryptCard(tmp));
 		}
 		return ret;
 	}
@@ -368,7 +371,6 @@ public class RSAService {
 			return null;
 		}
 		EncryptedDeck encDeck = new EncryptedDeck();
-		encDeck.usersEncrypted.add(usr);
 		for (int i = 0; i < Deck.NUM_CARDS; i++){
 			EncryptedCard tmp = encryptCard(deck.getCardAtIndex(i));
 			if (i >= encDeck.data.size()){
