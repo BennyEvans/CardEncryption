@@ -12,19 +12,27 @@ import java.util.ArrayList;
 /**
  * The Class Passable.
  *
+ * @param <E> the element type
  */
 public class Passable<E> implements java.io.Serializable {
 
 	/** The Constant serialVersionUID. */
 	private static final long serialVersionUID = 3090666232050760788L;
-	
+
 	/** The data. */
 	public ArrayList<E> data = new ArrayList<E>();
-	
+
 	/** The signature. */
 	public byte[] signature;
+
 	
-	public byte[] writeObject() throws IOException{
+	/**
+	 * Write object. Converts a Passable Object into a byte array.
+	 *
+	 * @return the byte[]
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 */
+	public byte[] writeObject() throws IOException {
 		byte[] tmpBytes;
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		ObjectOutput out = null;
@@ -35,13 +43,25 @@ public class Passable<E> implements java.io.Serializable {
 		out.close();
 		return tmpBytes;
 	}
+
 	
-	public static Passable<?> readObject(byte[] tmpBytes) throws IOException, ClassNotFoundException{
+	/**
+	 * Read object. Converts a byte array representation of a Passable Object
+	 * into a Passable<?> Object.
+	 *
+	 * @param tmpBytes the tmp bytes
+	 * @return the passable
+	 * @throws IOException Signals that an I/O exception has occurred.
+	 * @throws ClassNotFoundException the class not found exception
+	 */
+	public static Passable<?> readObject(byte[] tmpBytes) throws IOException,
+			ClassNotFoundException {
+		
 		Passable<?> ret;
 		ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
 		ObjectInput in;
 		in = new ObjectInputStream(bis);
-		ret = (Passable<?>) in.readObject(); 
+		ret = (Passable<?>) in.readObject();
 		bis.close();
 		in.close();
 		return ret;

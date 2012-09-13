@@ -893,7 +893,7 @@ public class ComService {
 		}
 
 		//encrypt and shuffle the deck
-		EncryptedDeck encDeck = rsaService.encryptEncDeck(encryptedDeck, user);
+		EncryptedDeck encDeck = rsaService.encryptEncDeck(encryptedDeck);
 		encDeck.shuffleDeck();
 
 		//sign the deck

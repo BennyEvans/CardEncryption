@@ -343,7 +343,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			hostGameGBConstraints.gridheight = 1;
 
 			
-			System.out.println("Number of i: " + (SwingGUI.numberOfSlots.getSelectedIndex()+1));
+			//("Number of i: " + (SwingGUI.numberOfSlots.getSelectedIndex()+1));
 			//Spawn a box for the number of slots available.
 			hostGameGBConstraints.gridwidth = 1;
 			for (int i = 0; i <= (SwingGUI.numberOfSlots.getSelectedIndex()); i++)
@@ -357,7 +357,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 					hostGameGBConstraints.fill = GridBagConstraints.HORIZONTAL;
 					userButtons.get(i).setText("EMPTY\n SLOT");
 					hostingScreenGridLayout.add(userButtons.get(i), hostGameGBConstraints);
-					System.out.println(hostGameGBConstraints.gridx + " " + hostGameGBConstraints.gridy);
+					//System.out.println(hostGameGBConstraints.gridx + " " + hostGameGBConstraints.gridy);
 				} else {
 					currentX = 0;
 					currentY++;
@@ -366,7 +366,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 					hostGameGBConstraints.fill = GridBagConstraints.HORIZONTAL;
 					userButtons.get(i).setText("EMPTY\n SLOT");
 					hostingScreenGridLayout.add(userButtons.get(i), hostGameGBConstraints);
-					System.out.println(hostGameGBConstraints.gridx + " " + hostGameGBConstraints.gridy);
+					//System.out.println(hostGameGBConstraints.gridx + " " + hostGameGBConstraints.gridy);
 				}
 				
 				
@@ -383,7 +383,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			frame.setSize(500,450);
 		} else if ("joinGameFromSearch".equals(arg0.getActionCommand()))
 		{
-			System.out.println("join game button pushed?");
+			//System.out.println("join game button pushed?");
 			try {
 				jgt.waitForInstructionsBuffer.put(nameofHosterField.getText());
 				Thread.sleep(500);

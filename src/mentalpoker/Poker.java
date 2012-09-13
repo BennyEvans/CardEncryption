@@ -115,7 +115,7 @@ public class Poker {
 		com.broadcastPQ(rsaService.getP(), rsaService.getQ(), gameUsers.size());
 		System.out.println(rsaService.getP().toString() + "\n" + rsaService.getQ().toString());
 		//create and encrypt the deck
-		encDeck = createDeck(gameUser, rsaService);
+		encDeck = createDeck(rsaService);
 		
 	
 		//for each user in gameUsers request to encrypt the deck
@@ -377,15 +377,15 @@ public class Poker {
 	/**
 	 * Creates the deck.
 	 *
-	 * @param user the user
+	 * @param rsaServ the RSAService
 	 * @return the encrypted deck
 	 * @throws InvalidKeyException the invalid key exception
 	 * @throws BadPaddingException the bad padding exception
 	 * @throws IllegalBlockSizeException the illegal block size exception
 	 */
-	private EncryptedDeck createDeck(User user, RSAService rsaServ) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException{
+	private EncryptedDeck createDeck(RSAService rsaServ) throws InvalidKeyException, BadPaddingException, IllegalBlockSizeException{
 		Deck deck = new Deck();
-		EncryptedDeck encDeck = rsaServ.encryptDeck(deck, user);
+		EncryptedDeck encDeck = rsaServ.encryptDeck(deck);
 		return encDeck;
 	}
 
