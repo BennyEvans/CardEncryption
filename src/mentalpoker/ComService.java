@@ -1,22 +1,18 @@
 package mentalpoker;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.ObjectInput;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
-import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -48,10 +44,7 @@ public class ComService {
 	 *  This is used to call publish() on the parent!!!
 	 */
 
-	private HostGameTask hgt;
-
 	private SearchGamesTask jgt;
-
 
 	/** The game host. */
 	private User gameHost;
@@ -257,7 +250,6 @@ public class ComService {
 	public ArrayList<User> startNewGame(final int numberOfSlots, final HostGameTask hgt) throws InterruptedException, InvalidSubscriptionException, IOException {
 
 		gameHost = user;
-		this.hgt = hgt;
 
 		//notify potential players that there is a game
 		final Runnable notifyPotentialJoiners = new Runnable() {
@@ -355,9 +347,6 @@ public class ComService {
 							shutdown();
 							System.exit(-2);
 						}
-						//user table alter test
-						//tmpBytes[1] = 5;
-						//not.set(GAME_USERS, tmpBytes);
 
 						try {
 							elvin.send(not);
@@ -396,7 +385,7 @@ public class ComService {
 
 
 		notificationHandle = scheduler.scheduleAtFixedRate(
-				notifyPotentialJoiners, 498, 498, TimeUnit.MILLISECONDS);
+				notifyPotentialJoiners, 800, 800, TimeUnit.MILLISECONDS);
 
 		synchronized (gameSub) {
 			//wait until game is full
@@ -408,11 +397,7 @@ public class ComService {
 		gameSub.remove();
 		scheduler.shutdown();
 
-		//sleep for 250ms...
-		//I'm not sure this is necessary but its just a precaution... is Elvin FIFO?
-		//It's here to prevent the next command (send pq) being out of order and received
-		//before the START_GAME notification.
-		Thread.sleep(250);
+		Thread.sleep(100);
 
 		//send game full to other users not in the game
 		Notification gameFullNotification = new Notification();
@@ -639,13 +624,10 @@ public class ComService {
 						}
 					}
 
-
 					//notify the waiting thread that a message has arrived
 					synchronized (startSub) {
 						startSub.notify();
 					}
-
-
 
 				}
 			});
@@ -799,13 +781,8 @@ public class ComService {
 
 				byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_DECK);
 
-				ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
-				ObjectInput in;
 				try {
-					in = new ObjectInputStream(bis);
-					encryptedDeck = (EncryptedDeck) in.readObject(); 
-					bis.close();
-					in.close();
+					encryptedDeck = (EncryptedDeck) Passable.readObject(tmpBytes);
 				} catch (Exception e1) {
 					shutdown();
 					System.exit(-2);
@@ -821,17 +798,10 @@ public class ComService {
 		});
 
 		//construct the notification to send
-		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		ObjectOutput out = null;
-		out = new ObjectOutputStream(bos);
-		out.writeObject(encDeck);
-
-		byte[] tmpBytes = bos.toByteArray();
-
 		not.set(NOT_TYPE, ENCRYPT_DECK_REQUEST);
 		not.set(GAME_ID, gameHost.getID());
 		not.set(REQ_USER, reqUser.getID());
-		not.set(ENCRYPTED_DECK, tmpBytes);
+		not.set(ENCRYPTED_DECK, encDeck.writeObject());
 
 		synchronized (encSub) {
 			//send notification
@@ -870,17 +840,10 @@ public class ComService {
 		encSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
 
-				//System.out.println("Got Request!");
-
 				byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_DECK);
 
-				ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
-				ObjectInput in;
 				try {
-					in = new ObjectInputStream(bis);
-					encryptedDeck = (EncryptedDeck) in.readObject(); 
-					bis.close();
-					in.close();
+					encryptedDeck = (EncryptedDeck) Passable.readObject(tmpBytes);
 					if (!sigServ.validateSignature(encryptedDeck, pubKey)){
 						//sig failed!
 						callCheat(SIGNATURE_FAILED);
@@ -889,12 +852,6 @@ public class ComService {
 				} catch (Exception e1) {
 					e1.printStackTrace();
 				}
-
-				//notify the waiting thread that a message has arrived
-				synchronized (encSub) {
-					encSub.notify();
-				}
-
 
 				//notify the waiting thread that a message has arrived
 				synchronized (encSub) {
@@ -923,20 +880,10 @@ public class ComService {
 		//sign the deck
 		sigServ.createSignature(encDeck);
 
-		//String tmpStr = new String(encDeck.data.get(0).cardData);
-		//System.out.println("First Card: " + tmpStr.toString());
-
-		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		ObjectOutput out = null;
-		out = new ObjectOutputStream(bos);
-		out.writeObject(encDeck);
-
-		byte[] tmpBytes = bos.toByteArray();
-
 		not.set(NOT_TYPE, ENCRYPT_DECK_REPLY);
 		not.set(GAME_ID, gameHost.getID());
 		not.set(REQ_USER, user.getID());
-		not.set(ENCRYPTED_DECK, tmpBytes);
+		not.set(ENCRYPTED_DECK, encDeck.writeObject());
 
 		elvin.send(not);
 
@@ -955,25 +902,16 @@ public class ComService {
 	 */
 	public void sendEncryptedHand(User usr, EncryptedHand hand) throws IOException{
 		Notification not = new Notification();
-		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		ObjectOutput out = null;
-		out = new ObjectOutputStream(bos);
-		out.writeObject(hand);
 
 		System.out.println("Sending encrypted hand - " + new String(usr.getID()));
-
-		byte[] tmpBytes = bos.toByteArray();
-
 
 		not.set(NOT_TYPE, SEND_ENCRYPTED_HAND);
 		not.set(GAME_ID, gameHost.getID());
 		not.set(REQ_USER, usr.getID());
-		not.set(ENCRYPTED_HAND, tmpBytes);
+		not.set(ENCRYPTED_HAND, hand.writeObject());
 
 		elvin.send(not);
 
-		bos.close();
-		out.close();
 		return;
 	}
 
@@ -998,27 +936,15 @@ public class ComService {
 
 				byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_HAND);
 
-				ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
-				ObjectInput in;
 				try {
-					in = new ObjectInputStream(bis);
-					encryptedHand = (EncryptedHand) in.readObject(); 
-					bis.close();
-					in.close();
+					encryptedHand = (EncryptedHand) Passable.readObject(tmpBytes);
 					if (!sigServ.validateSignature(encryptedHand, pKey)){
 						//sig failed!
 						callCheat(SIGNATURE_FAILED);
-						encryptedDeck = null;
 					}
 				} catch (Exception e1) {
 					e1.printStackTrace();
 				}
-
-				//notify the waiting thread that a message has arrived
-				synchronized (eSub) {
-					eSub.notify();
-				}
-
 
 				//notify the waiting thread that a message has arrived
 				synchronized (eSub) {
@@ -1034,7 +960,6 @@ public class ComService {
 		}
 
 		eSub.remove();
-
 		return encryptedHand;
 	}
 
@@ -1049,28 +974,15 @@ public class ComService {
 	 * @throws InvalidSubscriptionException 
 	 */
 	public void decryptEncryptedHands(final RSAService rsaService, final int numRequests) throws InvalidSubscriptionException, IOException{
-		//should setup an asynchronous subscription and cancel when 
-		//all we have decrypted all users encrypted hands
-
 		decryptionCount = 0;
-
 		decryptSub = elvin.subscribe(NOT_TYPE + " == '" + DECRYPT_HAND_REQUEST +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
 
 		decryptSub.addListener(new NotificationListener() {
 			public void notificationReceived(NotificationEvent e) {
 
 				System.out.println("Got decrypt request.");
-
-				ByteArrayOutputStream bos = new ByteArrayOutputStream();
-				ObjectOutput out = null;
 				EncryptedHand encHand = null;
 				Notification not;
-				try {
-					Thread.sleep(250);
-				} catch (InterruptedException exc)
-				{
-					exc.printStackTrace();
-				}
 				
 				User userRequesting = findUserByID(e.notification.getString(SOURCE_USER));
 
@@ -1091,13 +1003,8 @@ public class ComService {
 
 				byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_HAND);
 
-				ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
-				ObjectInput in;
 				try {
-					in = new ObjectInputStream(bis);
-					encHand = (EncryptedHand) in.readObject(); 
-					bis.close();
-					in.close();
+					encHand = (EncryptedHand) Passable.readObject(tmpBytes);
 					if (!sigServ.validateSignature(encHand, userRequesting.getPublicKey())){
 						//sig failed!
 						callCheat(SIGNATURE_FAILED);
@@ -1106,46 +1013,24 @@ public class ComService {
 					//decrypt and sign
 					encHand = rsaService.decyrptEncHand(encHand);
 					sigServ.createSignature(encHand);
-					bis.close();
-					in.close();
 				} catch (Exception e1) {
 					shutdown();
 					System.exit(0);
 				}
 
-				try {
-					out = new ObjectOutputStream(bos);
-					out.writeObject(encHand);
-				} catch (IOException e1) {
-					shutdown();
-					System.exit(1);
-				}
-
-				byte[] retBytes = bos.toByteArray();
-
 				not = new Notification();
 				not.set(NOT_TYPE, DECRYPT_HAND_REPLY);
 				not.set(GAME_ID, gameHost.getID());
 				not.set(REQ_USER, userRequesting.getID());
-				not.set(ENCRYPTED_HAND, retBytes);
-
 				try {
+					not.set(ENCRYPTED_HAND, encHand.writeObject());
 					elvin.send(not);
-				} catch (IOException e2) {
+				} catch (IOException e1) {
 					shutdown();
 					System.exit(1);
 				}
 				
 				System.out.println("Finished decryption request");
-
-				try {
-					bos.close();
-					out.close();
-				} catch (IOException e1) {
-					shutdown();
-					System.exit(1);
-				}
-
 			}
 		});
 
@@ -1175,20 +1060,13 @@ public class ComService {
 
 				byte[] tmpBytes = (byte[]) e.notification.get(ENCRYPTED_HAND);
 
-				ByteArrayInputStream bis = new ByteArrayInputStream(tmpBytes);
-				ObjectInput in;
 				try {
-					in = new ObjectInputStream(bis);
-					encryptedHand = (EncryptedHand) in.readObject(); 
-					bis.close();
-					in.close();
+					encryptedHand = (EncryptedHand) Passable.readObject(tmpBytes);
 					if (!sigServ.validateSignature(encryptedHand, usr.getPublicKey())){
 						//sig failed!
 						callCheat(SIGNATURE_FAILED);
 						System.exit(0);
 					}
-					bis.close();
-					in.close();
 				} catch (Exception e1) {
 					shutdown();
 					System.exit(0);
@@ -1202,18 +1080,13 @@ public class ComService {
 			}
 		});
 
-		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		ObjectOutput out = new ObjectOutputStream(bos);
-		out.writeObject(encHand);
-
-		byte[] retBytes = bos.toByteArray();
 
 		not = new Notification();
 		not.set(NOT_TYPE, DECRYPT_HAND_REQUEST);
 		not.set(GAME_ID, gameHost.getID());
 		not.set(SOURCE_USER, user.getID());
 		not.set(REQ_USER, usr.getID());
-		not.set(ENCRYPTED_HAND, retBytes);
+		not.set(ENCRYPTED_HAND, encHand.writeObject());
 
 		synchronized (encSub) {
 			elvin.send(not);
@@ -1221,8 +1094,6 @@ public class ComService {
 			encSub.wait();
 		}
 
-		bos.close();
-		out.close();
 		encSub.remove();
 
 		return encryptedHand;
