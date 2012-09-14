@@ -145,7 +145,7 @@ public class Poker {
 		//take requests to decrypt a hand
 		com.decryptEncryptedHands(rsaService, gameUsers.size()-1);
 		
-		
+		//subscribe to notifications for users have their decrypted hands
 		com.subscribeUsersFinished(ComService.FINISHED_DEC_HAND);
 		
 		//choose random cards for each user
@@ -174,31 +174,15 @@ public class Poker {
 				myHand = hand;
 				gameUser.setUsersOriginalHand(hand);
 			} else {
+				//send the hand to the user
 				sig.createSignature(hand);
 				com.sendEncryptedHand(tmpUser, hand);
 			}
 		}
 		
-		//choose 5 random cards as the community cards
-		int count = 0;
-		rnd = new Random();
-		encComCards = new EncryptedCommunityCards();
-		Integer tmpInt = new Integer(rnd.nextInt(Deck.NUM_CARDS - 1));
-
-		while (count < CommunityCards.NUM_CARDS){
-			while (chosenCards.contains(tmpInt)){
-				tmpInt = new Integer(rnd.nextInt(Deck.NUM_CARDS - 1));
-			}
-			chosenCards.add(tmpInt);
-			encComCards.data.add(encDeck.data.get(tmpInt));
-			count++;
-		}
-		//sign the cards
-		sig.createSignature(encComCards);
-		
-		
 		System.out.println("Every user has their cards now!");
 		
+		//decrypt my cards
 		for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
 			User tmpUser = usr.next();
 			if (!tmpUser.getID().equals(gameUser.getID())){
@@ -219,12 +203,32 @@ public class Poker {
 		hgt.publishDelegate("HAVECARDS1c2n90801280c498n12904c80912c490102984nc1 " + card1 + " " + card2);
 		
 		
+		//choose 5 random cards as the community cards
+		int count = 0;
+		rnd = new Random();
+		encComCards = new EncryptedCommunityCards();
+		Integer tmpInt = new Integer(rnd.nextInt(Deck.NUM_CARDS - 1));
+
+		while (count < CommunityCards.NUM_CARDS){
+			while (chosenCards.contains(tmpInt)){
+				tmpInt = new Integer(rnd.nextInt(Deck.NUM_CARDS - 1));
+			}
+			chosenCards.add(tmpInt);
+			encComCards.data.add(encDeck.data.get(tmpInt));
+			count++;
+		}
+		//sign the cards
+		sig.createSignature(encComCards);
+		
 		//sit and block here until everyone has their plaintext cards
 		if (!com.blockUntilUsersFinished()){
 			System.out.println("Timeout!");
 			com.shutdown();
 			System.exit(0);
 		}
+		
+		//now stop decrypting hands
+		com.stopDecryptingHands();
 		
 		//subscribe to next lot of notifications
 		com.decryptCommunityCards(rsaService, gameUsers.size()-1);
@@ -263,6 +267,9 @@ public class Poker {
 			com.shutdown();
 			System.exit(0);
 		}
+		
+		//now stop decrypting community cards
+		com.stopDecryptingComCards();
 		
 		//start listening for users hands
 		com.listenUsersHands();
@@ -326,12 +333,14 @@ public class Poker {
 		jgt.waitForInstructionsBuffer.put(card1);
 		jgt.waitForInstructionsBuffer.put(card2);
 		
-		
 		//subscribe to next lot of notification
 		com.decryptCommunityCards(rsaService, gameUsers.size()-1);
 		
 		//notify have hand and wait for community cards
 		encComCards = com.listenForCommunityCards();
+		
+		//now stop decrypting hands
+		com.stopDecryptingHands();
 		
 		//start decrypting the community cards
 		for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
@@ -359,12 +368,16 @@ public class Poker {
 		com.verifyCommunityCards(comCards);
 		System.out.println("Community cards verified!");
 		
+		//now stop decrypting community cards
+		com.stopDecryptingComCards();
+		
 		//now broadcast you hand and wait for other hands
 		com.broadcastMyHand(gameUser);
 		com.blockUntilHaveUsersHands();
 		
 		jgt.waitForInstructionsBuffer.put(communityCardsToBeSentToJoiner);
-			
+		
+		
 		//determine winner and check their hand
 		
 		//sit and block here until everyone has said gameover

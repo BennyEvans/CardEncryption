@@ -250,7 +250,8 @@ public class ComService {
 	 * Shutdown.
 	 */
 	public void shutdown(){
-		stopDecrypting();
+		stopDecryptingHands();
+		stopDecryptingComCards();
 		stopListeningForCheaters();
 		elvin.close();
 	}
@@ -1056,16 +1057,20 @@ public class ComService {
 		return;
 	}
 
-	public void stopDecrypting(){
+	public void stopDecryptingHands(){
 		try{
 			decryptSub.remove();
+			decryptionCount = 0;
 		} catch (Exception e){
 			//do nothing
 		}
 		decryptSub = null;
-		
+	}
+	
+	public void stopDecryptingComCards(){
 		try{
 			decryptComSub.remove();
+			comDecryptionCount = 0;
 		} catch (Exception e){
 			//do nothing
 		}
@@ -1576,7 +1581,7 @@ public class ComService {
 	
 	
 	public void listenUsersHands(){
-		
+
 	}
 	
 	//send the whole user instance because it has all your details
