@@ -7,6 +7,7 @@ import java.security.NoSuchProviderException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Random;
 
@@ -71,14 +72,9 @@ public class Poker {
 		//Menu choice becomes the integer chosen by the user.
 		//int menuChoice = MenuOptions.printMainMenu();
 		ArrayList<User> gameUsers = null;
-		System.out.println("StartGame called" + isGameHost);
-		//send your public key to anyone who requests it
-		//com.acceptPubKeySigRequests(sig.getPublicKey());
 		if (isGameHost)
 		{
-			System.out.println("Before");
 			gameUsers = com.startNewGame(slots, hgt);
-			System.out.println("After");
 		}
 		
 		if (gameUsers == null){
@@ -108,8 +104,8 @@ public class Poker {
 		RSAService rsaService = new RSAService();
 		gameUser.setDecryptionKey(rsaService.getD());
 		EncryptedHand myHand = null;
-		//EncryptedHand originalHand = null;
 		EncryptedCommunityCards encComCards;
+		EncryptedCommunityCards originalEncCommunityCards;
 
 		//broadcast p and q
 		com.broadcastPQ(rsaService.getP(), rsaService.getQ(), gameUsers.size());
@@ -182,8 +178,11 @@ public class Poker {
 		
 		System.out.println("Every user has their cards now!");
 		
-		//decrypt my cards
-		for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
+		//copy and randomly shuffle the user list to distribute requests
+		@SuppressWarnings("unchecked")
+		ArrayList<User> tmpGameUsers = (ArrayList<User>) gameUsers.clone();
+		Collections.shuffle(tmpGameUsers);
+		for (Iterator<User> usr = tmpGameUsers.iterator(); usr.hasNext();){
 			User tmpUser = usr.next();
 			if (!tmpUser.getID().equals(gameUser.getID())){
 				sig.createSignature(myHand);
@@ -217,6 +216,7 @@ public class Poker {
 			encComCards.data.add(encDeck.data.get(tmpInt));
 			count++;
 		}
+		originalEncCommunityCards = encComCards;
 		//sign the cards
 		sig.createSignature(encComCards);
 		
@@ -231,7 +231,7 @@ public class Poker {
 		com.stopDecryptingHands();
 		
 		//subscribe to next lot of notifications
-		com.decryptCommunityCards(rsaService, gameUsers.size()-1);
+		com.decryptCommunityCards(rsaService, gameUsers.size()-1, true);
 		com.subscribeUsersFinished(ComService.FINISHED_DEC_COM_CARDS);
 		
 		//send out community cards
@@ -243,6 +243,9 @@ public class Poker {
 			if (!tmpUser.getID().equals(gameUser.getID())){
 				sig.createSignature(encComCards);
 				encComCards = com.requestDecryptComCards(encComCards, tmpUser);
+			} else {
+				User duplicateUser = new User(gameUser.getUsername(), gameUser.getID(), gameUser.getPublicKey());
+				encComCards.addUserToDecryptedTable(duplicateUser);
 			}
 			
 		}
@@ -257,8 +260,6 @@ public class Poker {
 			cardsMessageSentBackToHost = cardsMessageSentBackToHost.concat(" " + Character.toString(comCards.data.get(i).cardType) + "-" + new String(comCards.data.get(i).suit));
 			
 		}
-		
-		System.out.println("COMMUNITYCARDSSTRING " + cardsMessageSentBackToHost);
 		
 		hgt.publishDelegate(cardsMessageSentBackToHost);
 		
@@ -280,6 +281,12 @@ public class Poker {
 		com.sendRawCommunityCards(comCards);
 		System.out.println("Users all agreed with community cards!");
 		
+		//this is a protection mechanism for 2 player games
+		// on > 2 player games users protect one another
+		if (!com.getFirstUsersCommunityCards().compareCards(originalEncCommunityCards)){
+			com.callCheat(ComService.DECRYPT_REQUEST_ABUSE);
+		}
+		
 		//now broadcast you hand and wait for other hands
 		com.broadcastMyHand(gameUser);
 		com.blockUntilHaveUsersHands();
@@ -299,7 +306,7 @@ public class Poker {
 		EncryptedHand myHand;
 		EncryptedCommunityCards encComCards;
 		
-		PublicKey gameHostsPubKey = gameUsers.get(gameUsers.size()-1).getPublicKey();
+		PublicKey gameHostsPubKey = gameUsers.get(0).getPublicKey();
 
 		//take requests to decrypt a hand
 		com.decryptEncryptedHands(rsaService, gameUsers.size()-1);
@@ -314,7 +321,11 @@ public class Poker {
 		
 		System.out.println("Got my cards!");
 		
-		for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
+		//copy and randomly shuffle the user list to distribute requests
+		@SuppressWarnings("unchecked")
+		ArrayList<User> tmpGameUsers = (ArrayList<User>) gameUsers.clone();
+		Collections.shuffle(tmpGameUsers);
+		for (Iterator<User> usr = tmpGameUsers.iterator(); usr.hasNext();){
 			User tmpUser = usr.next();
 			if (!tmpUser.getID().equals(gameUser.getID())){
 				sig.createSignature(myHand);
@@ -334,7 +345,7 @@ public class Poker {
 		jgt.waitForInstructionsBuffer.put(card2);
 		
 		//subscribe to next lot of notification
-		com.decryptCommunityCards(rsaService, gameUsers.size()-1);
+		com.decryptCommunityCards(rsaService, gameUsers.size()-1, false);
 		
 		//notify have hand and wait for community cards
 		encComCards = com.listenForCommunityCards();
@@ -348,6 +359,9 @@ public class Poker {
 			if (!tmpUser.getID().equals(gameUser.getID())){
 				sig.createSignature(encComCards);
 				encComCards = com.requestDecryptComCards(encComCards, tmpUser);
+			} else {
+				User duplicateUser = new User(gameUser.getUsername(), gameUser.getID(), gameUser.getPublicKey());
+				encComCards.addUserToDecryptedTable(duplicateUser);
 			}
 			
 		}

@@ -406,6 +406,7 @@ public class RSAService {
 			IllegalBlockSizeException, BadPaddingException {
 		
 		EncryptedCommunityCards ret = new EncryptedCommunityCards();
+		ret.setUserList(cards.getUserList());
 		for (int i = 0; i < CommunityCards.NUM_CARDS; i++) {
 			EncryptedCard tmp = cards.data.get(i);
 			ret.data.add(decryptEncCard(tmp));

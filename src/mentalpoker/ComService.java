@@ -84,6 +84,13 @@ public class ComService {
 	private EncryptedHand encryptedHand;
 	
 	private EncryptedCommunityCards encryptedCommunityCards;
+	
+	private EncryptedCommunityCards previousDecryptionStep;
+	
+	private ArrayList<User> previousUserList;
+	
+	private EncryptedCommunityCards firstUsersCommunityCards;
+	
 
 	private Subscription decryptSub;
 	private Subscription decryptComSub;
@@ -181,6 +188,10 @@ public class ComService {
 			}
 		}
 		return null;
+	}
+	
+	public EncryptedCommunityCards getFirstUsersCommunityCards(){
+		return firstUsersCommunityCards;
 	}
 
 
@@ -339,7 +350,7 @@ public class ComService {
 						Notification not = new Notification();
 						UserList ul = new UserList();
 
-						currentGameMembers.add(user);
+						currentGameMembers.add(0, user);
 						ul.users = new ArrayList<User>(currentGameMembers);
 						ByteArrayOutputStream bos = new ByteArrayOutputStream();
 						ObjectOutput out = null;
@@ -417,7 +428,7 @@ public class ComService {
 		gameSub.remove();
 		scheduler.shutdown();
 
-		Thread.sleep(100);
+		//Thread.sleep(100);
 
 		//send game full to other users not in the game
 		Notification gameFullNotification = new Notification();
@@ -425,7 +436,7 @@ public class ComService {
 		gameFullNotification.set(GAME_ID, gameHost.getID());				
 		elvin.send(gameFullNotification);
 
-		Thread.sleep(50);
+		//Thread.sleep(50);
 
 		System.out.println("Starting Game!");
 
@@ -555,7 +566,7 @@ public class ComService {
 			return null;
 		}
 		
-		System.out.println("Joined Game!");
+		System.out.println("Joined Game!\n");
 
 		ArrayList<User> tmp = new ArrayList<User>(currentGameMembers);
 		//currentGameMembers = null;
@@ -768,7 +779,7 @@ public class ComService {
 
 		ret = new RSAService(pq[0], pq[1]);
 
-		System.out.println(pq[0].toString() + "\n" + pq[1].toString());
+		System.out.println("p: " + pq[0].toString() + "\nq: " + pq[1].toString() + "\n");
 
 		pqnot.set(GAME_ID, gameHost.getID());
 		pqnot.set(NOT_TYPE, BROADCAST_PQ_REPLY);
@@ -1313,8 +1324,11 @@ public class ComService {
 		return false;
 	}
 	
-	public void decryptCommunityCards(final RSAService rsaService, final int numRequests) throws InvalidSubscriptionException, IOException{
+	public void decryptCommunityCards(final RSAService rsaService, final int numRequests, final boolean isHost) throws InvalidSubscriptionException, IOException{
 		comDecryptionCount = 0;
+		previousDecryptionStep = null;
+		previousUserList = null;
+		firstUsersCommunityCards = null;
 		decryptComSub = elvin.subscribe(NOT_TYPE + " == '" + DECRYPT_COM_CARDS_REQUEST +"' && " + GAME_ID + " == '" + gameHost.getID() + "' && " + REQ_USER + " == '" + user.getID() + "'");
 
 		decryptComSub.addListener(new NotificationListener() {
@@ -1350,10 +1364,47 @@ public class ComService {
 						callCheat(SIGNATURE_FAILED);
 						System.exit(0);
 					}
+					
+					//check for abuse
+					if (isHost && firstUsersCommunityCards == null){
+						//this is only to protect 2 player games
+						//on > 2 player games players will naturally protect each other
+						firstUsersCommunityCards = encComCards;
+					}
+					if (previousUserList == null){
+						previousUserList = encComCards.getUserList();
+					} else {
+						System.out.println("Comparing requesters decrypted user list.");
+						if (!encComCards.compareUserList(previousUserList)){
+							//does not match so call cheat
+							callCheat(DECRYPT_REQUEST_ABUSE);
+							System.exit(0);
+						}
+					}
+					if (!encComCards.hasUserDecrypted(userRequesting.getID())){
+						if (previousDecryptionStep == null){
+							previousDecryptionStep = encComCards;
+						} else {
+							//compare with encComCards
+							System.out.println("Comparing requesters cards.");
+							if (!encComCards.compareCards(previousDecryptionStep)){
+								//does not match so call cheat
+								callCheat(DECRYPT_REQUEST_ABUSE);
+								System.exit(0);
+							}
+							
+						}
+					}
+					
+					//create a duplicate of yourself so you don't give out your decryption key or hand
+					User duplicateUser = new User(user.getUsername(), user.getID(), user.getPublicKey());
+					encComCards.addUserToDecryptedTable(duplicateUser);
+					
 					//decrypt and sign
 					encComCards = rsaService.decyrptEncComCards(encComCards);
 					sigServ.createSignature(encComCards);
 				} catch (Exception e1) {
+					e1.printStackTrace();
 					shutdown();
 					System.exit(0);
 				}
@@ -1395,6 +1446,7 @@ public class ComService {
 						callCheat(SIGNATURE_FAILED);
 						System.exit(0);
 					}
+					
 				} catch (Exception e1) {
 					shutdown();
 					System.exit(0);
