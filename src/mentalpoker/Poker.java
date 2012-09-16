@@ -25,13 +25,19 @@ import org.avis.client.InvalidSubscriptionException;
  */
 public class Poker {
 	
-	/** The com. */
-	ComService com;
+	
+	public static int SUIT = 1;
+	public static int CARDTYPE = 0;
+	
+	public static ArrayList<String> royals;
+
 	
 	/** The game user. */
 	private static User gameUser;
 	
 	private static SigService sig;
+	/** The com. */
+	ComService com;
 
 
 	/**
@@ -40,6 +46,20 @@ public class Poker {
 	 * @throws Exception the exception
 	 */
 	public Poker(String username) throws Exception {
+		
+		/**
+		 * For game determination
+		 */
+		
+		royals = new ArrayList<String>();
+		
+		
+		royals.add("J");
+		royals.add("Q");
+		royals.add("K");
+		royals.add("A");
+		
+
 		
 		//com = new ComService(gameUser, "elvin://elvin.students.itee.uq.edu.au", sig);
 		//return;
@@ -197,6 +217,8 @@ public class Poker {
 		String card1 = Character.toString(hand.data.get(0).cardType) + "-" + new String(hand.data.get(0).suit);
 		String card2 = Character.toString(hand.data.get(1).cardType) + "-" + new String(hand.data.get(1).suit);
 		System.out.println("My Cards: " + card1 + " " + card2);
+		
+		
 		
 		//Provide the cards back to the user.
 		hgt.publishDelegate("HAVECARDS1c2n90801280c498n12904c80912c490102984nc1 " + card1 + " " + card2);
@@ -494,7 +516,7 @@ public class Poker {
 	 * @param gU
 	 * @return
 	 */
-	public boolean determineIfWinner(CommunityCards cc, ArrayList<User> allGameUsers)
+	public User determineWinner(CommunityCards cc, ArrayList<User> allGameUsers)
 	{
 		
 		//Hand ranks
@@ -510,15 +532,128 @@ public class Poker {
 		 * Two pair (2 pairs of 2 cards of th same rank)
 		 * One pair (two cards of the same rank)
 		 * High card (if there are no pairs, the person with the highest card wins)
-		 * 
-		 * 
-		 * 
 		 */
 		
+		//Put all the cards and their suits in an array for easy access.
+		ArrayList<ArrayList<String>> commCardsArray = new ArrayList<ArrayList<String>>();
+			for (int i = 0; i < CommunityCards.NUM_CARDS; i++){
+			ArrayList<String> card = new ArrayList<String>();
+			card.add(Character.toString(cc.data.get(i).cardType));
+			card.add(cc.data.get(i).suit);
+			commCardsArray.add(card);	
+		}
+			
+		for (User u:allGameUsers)
+		{
+			/**
+			 * In this section, we convert the cards into arrays for easy iteration
+			 */
+			String userCard1 = Character.toString(u.getUsersHand().data.get(0).cardType);
+			String userCard2 = Character.toString(u.getUsersHand().data.get(1).cardType);
+			
+			//Card 1 of user's hand
+			ArrayList<String> card1 = new ArrayList<String>();
+			card1.add(userCard1);
+			card1.add(u.getUsersHand().data.get(0).suit);
+			
+			//Card 2 of user's hand
+			ArrayList<String> card2 = new ArrayList<String>();
+			card2.add(userCard2);
+			card2.add(u.getUsersHand().data.get(1).suit);
+			
+			ArrayList<ArrayList<String>> userCards = new ArrayList<ArrayList<String>>();
+			userCards.add(card1);
+			userCards.add(card2);
+			
+			/**
+			 * Check for royal flush
+			 */
+			
+			//First check that we have 5 cards which are royal
+			
+			int numberOfRoyals = 0;
+
+			ArrayList<ArrayList<String>> potentialCards = new ArrayList<ArrayList<String>>();
+ 			for (ArrayList<String> card: userCards)
+ 			{
+ 				if (cardIsRoyal(card.get(this.CARDTYPE)))
+ 				{
+ 					numberOfRoyals++;
+ 					potentialCards.add(card);
+ 				}
+ 			}
+ 			
+ 			for (ArrayList<String> commCardString: commCardsArray)
+ 			{
+ 				if (cardIsRoyal(commCardString.get(this.CARDTYPE)))
+ 				{
+ 					numberOfRoyals++;
+ 					potentialCards.add(commCardString);
+ 				}
+ 			}
+ 			
+ 			boolean isThisARoyalFlush = false;
+ 			
+ 			//If there are enough potential royals, continue 
+ 			if (numberOfRoyals >= 5)
+ 			{
+ 				String firstCardSuit = potentialCards.get(0).get(this.SUIT);
+ 				//Check every card is in the same suit.
+ 				boolean allCardsInSameSuit = true;
+ 				for (ArrayList<String> potCard: potentialCards)
+ 				{
+ 					if (!potCard.get(this.SUIT).equals(firstCardSuit))
+ 					{
+ 						allCardsInSameSuit = false;
+ 						break;
+ 					}
+ 				}
+ 				
+ 				/**
+ 				 * If we have gone over all the cards, and they are all royals, AND are all in the same suit
+ 				 * Then we are guaranteed that 
+ 				 */
+ 				//If we've gone over all the cards, and they are all royals, AND are all in the same suit
+ 				
+ 				if (allCardsInSameSuit)
+ 				{
+ 					//This user is the winner, assuming that you cannot have multiple royal flushes from the same dispersement
+ 					//of cards.
+ 					return u;
+ 				}
+ 			} else {
+ 				isThisARoyalFlush = false;
+ 			}
+ 			
+ 			/**
+ 			 * Straight flush
+ 			 * (straight of entirely one suit)
+ 			 */
+ 			
+ 			
+ 			
+ 			
+ 			
+ 			
+ 			
+		}
 		
+		//No winner (WE SHOULD NEVER GET TO THIS POINT!)
+		System.err.println("No winner was found, there is a bug in determineWinner");
+		return null;
+	
 		
-		return false;
+	}
+	
+	private boolean cardIsRoyal(String suit)
+	{
 		
+		if (this.royals.contains(suit))
+		{
+			return true;
+		} else {
+			return false;
+		}
 	}
 	
 }
