@@ -91,11 +91,14 @@ public class ComService {
 	
 	private EncryptedCommunityCards firstUsersCommunityCards;
 	
+	private ArrayList<User> usersHands = new ArrayList<User>();
+	
 
 	private Subscription decryptSub;
 	private Subscription decryptComSub;
 	private Subscription cheaterSub;
 	private Subscription waiterSub;
+	private Subscription waitHandsSub;
 	
 	private int usersHaveData;
 	
@@ -134,6 +137,8 @@ public class ComService {
 	private static final String RAW_COMMUNITY_CARDS = "rawComCards";
 	private static final String REQUEST_RAW_COMMUNITY_CARDS = "reqRawComCards";
 	private static final String RAW_COMMUNITY_CARDS_VERIFIED = "rawComCardsVerified";
+	private static final String BROADCAST_HAND = "bchand";
+	private static final String USER_HAND = "uhand";
 
 	/** Cheat Reasons */
 	public static final int PUBLIC_KEY_CHANGED = 1;
@@ -1312,13 +1317,13 @@ public class ComService {
 	
 	public boolean blockUntilUsersFinished() throws InterruptedException, IOException{
 		//30 second timeout
-		for (int timeout = 0; timeout < 150; timeout++){
+		for (int timeout = 0; timeout < 300; timeout++){
 			if (usersHaveData >= currentGameMembers.size()){
 				//return
 				waiterSub.remove();
 				return true;
 			}
-			Thread.sleep(200);
+			Thread.sleep(100);
 		}
 		waiterSub.remove();
 		return false;
@@ -1632,17 +1637,84 @@ public class ComService {
 	}
 	
 	
-	public void listenUsersHands(){
+	public void listenUsersHands() throws InvalidSubscriptionException, IOException{
+		
+		waitHandsSub = elvin.subscribe(NOT_TYPE + " == '" + BROADCAST_HAND +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
+
+		waitHandsSub.addListener(new NotificationListener() {
+			public void notificationReceived(NotificationEvent e) {
+				
+				ByteArrayInputStream bis;
+				ObjectInput in;
+				User tmpUser;
+				byte[] tmpBytes = (byte[]) e.notification.get(USER_HAND);
+
+				try {
+					bis = new ByteArrayInputStream(tmpBytes);
+					in = new ObjectInputStream(bis);
+					tmpUser = (User) in.readObject();
+					bis.close();
+					in.close();
+					
+					if (findUserByID(tmpUser.getID()) == null){
+						return;
+					}
+
+					if (sigServ.validateVerifiedSignature((byte[]) e.notification.get(SIGNATURE), tmpUser.getPublicKey())){
+						usersHands.add(tmpUser);
+						return;
+					} else {
+						//sig failed!
+						callCheat(SIGNATURE_FAILED);
+						System.exit(0);
+					}
+					
+
+				} catch (Exception e1) {
+					shutdown();
+					System.exit(0);
+				}
+
+			}
+		});
 
 	}
 	
+	
 	//send the whole user instance because it has all your details
-	public void broadcastMyHand(User usr){
+	public void broadcastMyHand(User usr) throws IOException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException{
 		
+		Notification not = new Notification();
+		byte[] tmpBytes;
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		ObjectOutput out = null;
+		
+		out = new ObjectOutputStream(bos);
+		out.writeObject(usr);
+		tmpBytes = bos.toByteArray();
+		
+		not.set(NOT_TYPE, BROADCAST_HAND);
+		not.set(GAME_ID, gameHost.getID());
+		not.set(USER_HAND, tmpBytes);
+		not.set(SIGNATURE, sigServ.createVerifiedSignature());
+		
+		elvin.send(not);
+		bos.close();
+		out.close();
 	}
 	
 	//return the users id, name, cards and 
-	public ArrayList<User> blockUntilHaveUsersHands(){
+	public ArrayList<User> blockUntilHaveUsersHands() throws IOException, InterruptedException{
+		//30 second timeout
+		for (int timeout = 0; timeout < 300; timeout++){
+			if (usersHands.size() == currentGameMembers.size()){
+				//return
+				waitHandsSub.remove();
+				return usersHands;
+			}
+			Thread.sleep(100);
+		}
+		waitHandsSub.remove();
 		return null;
 	}
 	

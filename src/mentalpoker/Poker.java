@@ -261,13 +261,13 @@ public class Poker {
 			
 		}
 		
-		hgt.publishDelegate(cardsMessageSentBackToHost);
-		
 		if (!com.blockUntilUsersFinished()){
 			System.out.println("Timeout!");
 			com.shutdown();
 			System.exit(0);
 		}
+		
+		hgt.publishDelegate(cardsMessageSentBackToHost);
 		
 		//now stop decrypting community cards
 		com.stopDecryptingComCards();
@@ -289,9 +289,22 @@ public class Poker {
 		
 		//now broadcast you hand and wait for other hands
 		com.broadcastMyHand(gameUser);
-		com.blockUntilHaveUsersHands();
 		
-		//determine winner and check their hand
+		ArrayList<User> userHands = com.blockUntilHaveUsersHands();
+		for (int i = 0; i < userHands.size(); i++){
+			User tmpUser = userHands.get(i);
+			Hand tmpHand = tmpUser.getUsersHand();
+			if (tmpUser.getID().equals(gameUser.getID())){
+				System.out.println("ME");
+			} else {
+				System.out.println(tmpUser.getUsername().toString());
+			}
+			System.out.println("First Card: " + Character.toString(tmpHand.data.get(0).cardType) + "-" + tmpHand.data.get(0).suit.toString());
+			System.out.println("Second Card: " + Character.toString(tmpHand.data.get(1).cardType) + "-" + tmpHand.data.get(1).suit.toString());
+		}
+		
+		//now determine the winner and check the winners cards
+		
 		
 		Thread.sleep(2500);
 		com.shutdown();
@@ -385,15 +398,26 @@ public class Poker {
 		//now stop decrypting community cards
 		com.stopDecryptingComCards();
 		
-		//now broadcast you hand and wait for other hands
-		com.broadcastMyHand(gameUser);
-		com.blockUntilHaveUsersHands();
-		
 		jgt.waitForInstructionsBuffer.put(communityCardsToBeSentToJoiner);
 		
+		//now broadcast you hand and wait for other hands
+		com.broadcastMyHand(gameUser);
+		ArrayList<User> userHands = com.blockUntilHaveUsersHands();
+		for (int i = 0; i < userHands.size(); i++){
+			User tmpUser = userHands.get(i);
+			Hand tmpHand = tmpUser.getUsersHand();
+			if (tmpUser.getID().equals(gameUser.getID())){
+				System.out.println("ME");
+			} else {
+				System.out.println(tmpUser.getUsername().toString());
+			}
+			System.out.println("First Card: " + Character.toString(tmpHand.data.get(0).cardType) + "-" + tmpHand.data.get(0).suit.toString());
+			System.out.println("Second Card: " + Character.toString(tmpHand.data.get(1).cardType) + "-" + tmpHand.data.get(1).suit.toString());
+		}
 		
-		//determine winner and check their hand
+		//now determine the winner and check the winners cards
 		
+
 		//sit and block here until everyone has said gameover
 		Thread.sleep(2500);
 		com.shutdown();

@@ -17,9 +17,6 @@ public class User implements java.io.Serializable{
 	private Hand usersHand;
 	private EncryptedHand usersOriginalHand;
 	
-	/** The signature. */
-	public byte[] signature;
-	
 	/**
 	 * Instantiates a new user.
 	 *
