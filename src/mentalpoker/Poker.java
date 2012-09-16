@@ -8,7 +8,9 @@ import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Random;
 
 import javax.crypto.BadPaddingException;
@@ -629,6 +631,42 @@ public class Poker {
  			 * Straight flush
  			 * (straight of entirely one suit)
  			 */
+ 			
+ 			//Check all cards (both in the user's hand and in community cards), check that there are 
+ 			//5 of one suit.
+ 			Map<String,Integer> suitFrequency = new HashMap<String,Integer>();
+ 			
+ 			suitFrequency.put("spades",0);
+ 			suitFrequency.put("hearts",0);
+ 			suitFrequency.put("diamonds",0);
+ 			suitFrequency.put("clubs",0);
+ 			for (ArrayList<String> card: userCards)
+ 			{
+ 				int tempScore = ( suitFrequency.get(card.get(this.CARDTYPE)))+1;
+ 				
+ 				suitFrequency.put(card.get(this.CARDTYPE),tempScore);
+ 			}
+ 			
+ 			for (ArrayList<String> commCardString: commCardsArray)
+ 			{
+ 				int tempScore = ( suitFrequency.get(commCardString.get(this.CARDTYPE)))+1;
+ 				
+ 				suitFrequency.put(commCardString.get(this.CARDTYPE),tempScore);
+ 			}
+ 			
+ 			//Check whether one is greater than 5.
+ 			for (int indivFrequency : suitFrequency.values())
+ 			{
+ 				if (indivFrequency >= 5)
+ 				{
+ 					
+ 				}
+ 			}
+ 			
+ 			
+ 			
+ 			//suitFrequency now contains the frequency of suits in the user's hand as well as
+ 			//in the community cards. We can use this to determine if a straight flush can exist.
  			
  			
  			
