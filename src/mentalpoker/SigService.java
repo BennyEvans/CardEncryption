@@ -32,6 +32,12 @@ public class SigService {
 	/** The key. */
 	private KeyPair key;
 	
+	public final static int CHEATER_NONCE = 1;
+	public final static int HAVE_HAND_NONCE = 2;
+	public final static int VERIFY_COM_CARDS_NONCE = 3;
+	public final static int REQUEST_COM_CARDS_NONCE = 4;
+	public final static int RAW_HAND_NONCE = 4;
+	
 	/**
 	 * Instantiates a new signature service.
 	 *
@@ -101,10 +107,10 @@ public class SigService {
 	}
 	
 
-	public byte[] createVerifiedSignature() throws UnsupportedEncodingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException{
+	public byte[] createVerifiedSignature(int nonce) throws UnsupportedEncodingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException{
 
-	
-		final byte[] data = "verified".getBytes();
+		String toSign = "verified" + Integer.toString(nonce);
+		final byte[] data = toSign.getBytes();
 		
         MessageDigest messageDigest = MessageDigest.getInstance("MD5");
         messageDigest.update(data);
@@ -170,12 +176,13 @@ public class SigService {
 	        return true;
 	}
 	
-	public boolean validateVerifiedSignature(final byte[] sig, PublicKey pKey) throws NoSuchAlgorithmException {
+	public boolean validateVerifiedSignature(final byte[] sig, PublicKey pKey, int nonce) throws NoSuchAlgorithmException {
 
 		byte[] newd;
 		byte[] ver;
 	
-		final byte[] data = "verified".getBytes();
+		String toSign = "verified" + Integer.toString(nonce);
+		final byte[] data = toSign.getBytes();
 		
 		MessageDigest messageDigest = MessageDigest.getInstance("MD5");
 		try {
