@@ -616,7 +616,7 @@ public class ComService {
 
 					byte[] hostSignature = (byte[]) e.notification.get(SIGNATURE);
 					try {
-						if (!sigServ.validateSignatureForByteArray(hostSignature, tmpBytes, gameHost.getPublicKey())){
+						if (!sigServ.validateSignatureFromByteArray(hostSignature, tmpBytes, gameHost.getPublicKey())){
 							callCheat(USER_TABLE_SIGNATURE_FAILED);
 						}
 					} catch (Exception e2) {
