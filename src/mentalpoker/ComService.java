@@ -1179,7 +1179,7 @@ public class ComService {
 				System.out.println("Got cheater notification!");
 
 				try {
-					if (sigServ.validateVerifiedSignature((byte[]) e.notification.get(SIGNATURE), tmpUser.getPublicKey())){
+					if (sigServ.validateVerifiedSignature((byte[]) e.notification.get(SIGNATURE), tmpUser.getPublicKey(), SigService.CHEATER_NONCE)){
 						//signature validated so this is a real cheat notification
 						int reason = e.notification.getInt("reason");
 						if (isHost){
@@ -1252,7 +1252,7 @@ public class ComService {
 		not.set(GAME_ID, gameHost.getID());
 		not.set(SOURCE_USER, user.getID());
 		not.set("reason", reason);
-		not.set(SIGNATURE, sigServ.createVerifiedSignature());
+		not.set(SIGNATURE, sigServ.createVerifiedSignature(SigService.CHEATER_NONCE));
 
 		elvin.send(not);
 		shutdown();
@@ -1272,12 +1272,16 @@ public class ComService {
 	public void subscribeUsersFinished(int type) throws InvalidSubscriptionException, IOException{
 		usersHaveData = 1;
 		String tmp;
+		final int nonce;
 		if (type == FINISHED_DEC_HAND){
 			tmp = HAVE_MY_HAND;
+			nonce = SigService.HAVE_HAND_NONCE;
 		} else if (type == FINISHED_DEC_COM_CARDS){
 			tmp = REQUEST_RAW_COMMUNITY_CARDS;
+			nonce = SigService.REQUEST_COM_CARDS_NONCE;
 		} else {
 			tmp = RAW_COMMUNITY_CARDS_VERIFIED;
+			nonce = SigService.VERIFY_COM_CARDS_NONCE;
 		}
 		waiterSub = elvin.subscribe(NOT_TYPE + " == '" + tmp +"' && " + GAME_ID + " == '" + gameHost.getID() + "'");
 
@@ -1294,7 +1298,7 @@ public class ComService {
 				}
 
 				try {
-					if (sigServ.validateVerifiedSignature((byte[]) e.notification.get(SIGNATURE), tmpUser.getPublicKey())){
+					if (sigServ.validateVerifiedSignature((byte[]) e.notification.get(SIGNATURE), tmpUser.getPublicKey(), nonce)){
 						//signature validated so this is a real cheat notification
 						usersHaveData++;
 						if (usersHaveData >= currentGameMembers.size()){
@@ -1469,7 +1473,7 @@ public class ComService {
 		not.set(NOT_TYPE, HAVE_MY_HAND);
 		not.set(GAME_ID, gameHost.getID());
 		not.set(SOURCE_USER, user.getID());
-		not.set(SIGNATURE, sigServ.createVerifiedSignature());
+		not.set(SIGNATURE, sigServ.createVerifiedSignature(SigService.HAVE_HAND_NONCE));
 
 		synchronized (encSub) {
 			elvin.send(not);
@@ -1603,7 +1607,7 @@ public class ComService {
 					not.set(NOT_TYPE, RAW_COMMUNITY_CARDS_VERIFIED);
 					not.set(GAME_ID, gameHost.getID());
 					not.set(SOURCE_USER, user.getID());
-					not.set(SIGNATURE, sigServ.createVerifiedSignature());
+					not.set(SIGNATURE, sigServ.createVerifiedSignature(SigService.VERIFY_COM_CARDS_NONCE));
 					
 					elvin.send(not);
 
@@ -1624,7 +1628,7 @@ public class ComService {
 		not.set(NOT_TYPE, REQUEST_RAW_COMMUNITY_CARDS);
 		not.set(GAME_ID, gameHost.getID());
 		not.set(SOURCE_USER, user.getID());
-		not.set(SIGNATURE, sigServ.createVerifiedSignature());
+		not.set(SIGNATURE, sigServ.createVerifiedSignature(SigService.REQUEST_COM_CARDS_NONCE));
 
 		synchronized (encSub) {
 			elvin.send(not);
@@ -1660,7 +1664,7 @@ public class ComService {
 						return;
 					}
 
-					if (sigServ.validateVerifiedSignature((byte[]) e.notification.get(SIGNATURE), tmpUser.getPublicKey())){
+					if (sigServ.validateVerifiedSignature((byte[]) e.notification.get(SIGNATURE), tmpUser.getPublicKey(), SigService.RAW_HAND_NONCE)){
 						usersHands.add(tmpUser);
 						return;
 					} else {
@@ -1696,7 +1700,7 @@ public class ComService {
 		not.set(NOT_TYPE, BROADCAST_HAND);
 		not.set(GAME_ID, gameHost.getID());
 		not.set(USER_HAND, tmpBytes);
-		not.set(SIGNATURE, sigServ.createVerifiedSignature());
+		not.set(SIGNATURE, sigServ.createVerifiedSignature(SigService.RAW_HAND_NONCE));
 		
 		elvin.send(not);
 		bos.close();
