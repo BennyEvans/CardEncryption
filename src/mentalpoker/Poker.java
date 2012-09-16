@@ -486,4 +486,39 @@ public class Poker {
 		gameUser = new User(username, sig.getPublicKey());
 	}
 	
+	/**
+	 * Determine if the given user's hand will win.
+	 * Takes all the game users, then analyses their hands
+	 * in order to figure out who has won.
+	 * @param cc
+	 * @param gU
+	 * @return
+	 */
+	public boolean determineIfWinner(CommunityCards cc, ArrayList<User> allGameUsers)
+	{
+		
+		//Hand ranks
+		
+		/**
+		 * Royal flush (ace-high straight of one suit)
+		 * Straight flush (straight of entirely one suit)
+		 * Four of a kind (four cards of the same kind)
+		 * Full house (3 of a kind, and a pair)
+		 * Flush (five cards of the same suit)
+		 * Straight (five cards of sequential rank)
+		 * Three-of-a-kind (3 cards of same rank)
+		 * Two pair (2 pairs of 2 cards of th same rank)
+		 * One pair (two cards of the same rank)
+		 * High card (if there are no pairs, the person with the highest card wins)
+		 * 
+		 * 
+		 * 
+		 */
+		
+		
+		
+		return false;
+		
+	}
+	
 }
