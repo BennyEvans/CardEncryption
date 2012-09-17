@@ -563,7 +563,7 @@ public class Poker {
 					com.sampullara.poker.Card.Suit.parse(ccard.get(Poker.SUIT))));
 		}
 			
-		Cards[] allUsersCards = new Cards[]{};
+		Cards[] allUsersCards = new Cards[allGameUsers.size()];
 		
 		int usersCardsIndex = 0;	
 		for (User u:allGameUsers)
