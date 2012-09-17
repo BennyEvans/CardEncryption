@@ -339,6 +339,7 @@ public class Poker {
 		}
 
 		System.out.println("Winner was: " + new String(winner.getUsername()));
+		hgt.publishDelegate("WINNER189290128490182498124kjsafdl " + winner.getUsername());
 		
 		Thread.sleep(2500);
 		comServ.shutdown();
@@ -457,6 +458,7 @@ public class Poker {
 		}
 
 		System.out.println("Winner was: " + new String(winner.getUsername()));
+		jgt.waitForInstructionsBuffer.put(winner.getUsername());
 		
 		comServ.shutdown();
 		return;
@@ -512,8 +514,12 @@ public class Poker {
 	}
 
 
-	public static User getGameUser() {
+	public User getGameUser() {
 		return gameUser;
+	}
+	
+	public String getGameUserUsername() {
+		return gameUser.getUsername();
 	}
 
 

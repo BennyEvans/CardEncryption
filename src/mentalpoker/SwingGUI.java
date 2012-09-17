@@ -380,7 +380,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			cl.show(cards, joinGameScreenTitle);
 			jgt = new SearchGamesTask();
 			jgt.execute();
-			frame.setSize(500,450);
+			frame.setSize(700,450);
 		} else if ("joinGameFromSearch".equals(arg0.getActionCommand()))
 		{
 			//System.out.println("join game button pushed?");
@@ -431,10 +431,29 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 					
 				}
 				
-				//Now show the games screen
+				
+				String winner = jgt.waitForInstructionsBuffer.take();
+				
+				if (winner.equals(poker.getGameUser().getUsername()))
+				{
+					JLabel youWon = new JLabel("You won!");
+					cardScreenGBC.gridy = 5;
+					cardScreenGBC.gridx = 1;
+					cardScreenGBC.gridwidth = 1;
+					cardScreenLayout.add(youWon,cardScreenGBC);
+					
+				} else {
+					JLabel youWon = new JLabel(winner + " won that hand.");
+					cardScreenGBC.gridy = 5;
+					cardScreenGBC.gridx = 1;
+					cardScreenGBC.gridwidth = 1;
+					cardScreenLayout.add(youWon,cardScreenGBC);
+				}
+				
 				
 				CardLayout cl = (CardLayout)(cards.getLayout());
 				cl.show(cards, cardScreenTitle);
+
 				
 			} catch (InterruptedException iex)
 			{
@@ -501,7 +520,6 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 				try {
 					card1Picture = ImageIO.read(new File("src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card1+".png"));
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				BufferedImage card2Picture = null;
@@ -559,6 +577,27 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 					cl.show(cards, cardScreenTitle);
 					
 				}
+			} else if (splitString[0].equals("WINNER189290128490182498124kjsafdl"))
+			{
+				if (splitString[1].equals(poker.getGameUser().getUsername()))
+				{
+					JLabel youWon = new JLabel("You won!");
+					cardScreenGBC.gridy = 5;
+					cardScreenGBC.gridx = 0;
+					cardScreenGBC.gridwidth = 5;
+					cardScreenLayout.add(youWon,cardScreenGBC);
+					cardScreenLayout.revalidate();
+				} else {
+					JLabel youWon = new JLabel(splitString[1] + " won that hand.");
+					cardScreenGBC.gridy = 5;
+					cardScreenGBC.gridx = 0;
+					cardScreenGBC.gridwidth = 5;
+					cardScreenLayout.add(youWon,cardScreenGBC);
+					cardScreenLayout.revalidate();
+				}
+				
+				frame.setSize(1024,600);
+				
 			}
 			
 			
