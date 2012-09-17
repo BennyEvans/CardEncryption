@@ -15,7 +15,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -48,30 +47,23 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 	protected static JFrame frame;
 	protected static JFrame joinOrHostGameFrame;
 	static Poker poker;
-	static JComboBox numberOfSlots;
+	static JComboBox<?> numberOfSlots;
 	private JPanel slotChoiceLayout;
 	private JPanel joinOrHostPagePanel;
 	private JLabel warning;
 	public HostGameTask hgt;
 	public SearchGamesTask jgt;
 	private ArrayList<JButton> userButtons;
-	private ArrayList<JLabel> userLabels;
 	private JPanel hostingScreenGridLayout;
 	private GridBagConstraints hostGameGBConstraints;
-	private JPanel hostGamePanel;
 	private GridBagConstraints joinGameGBConstraints;
 	private JPanel joinGamePanel;
-	private Set gameHosters;
-	private DefaultListModel listModel;
-	private JList gamesList;
+	private DefaultListModel<String> listModel;
+	private JList<String> gamesList;
 	private JTextField nameofHosterField;
 	private GridBagConstraints cardScreenGBC;
 	private JPanel cardScreenLayout;
 	private BufferedImage titleImage;
-	private JLabel titleImageLabel;
-	
-	private SigService sig;
-
 	//Names of the panes
 	final static String usernameInputTitle = "usernameInputPane";
 	final static String joinOrHostTitle = "joinOrHostPane";
@@ -80,6 +72,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 	final static String joinGameScreenTitle = "joinGameScreenTitle";
 	final static String cardScreenTitle = "cardScreenTitle";
 
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void addComponentToPane(Container pane)
 	{
 		//Set up the title image for reuse.
@@ -96,7 +89,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		 * Username input card
 		 */
 		JPanel usernameInputPaneLine1 = new JPanel();
-		usernameLabel = new JLabel("Give us your username:");
+		usernameLabel = new JLabel("Enter your username:");
 		usernameField = new JTextField(20);
 		startButton = new JButton();
 		startButton.setText("Set Username");
@@ -232,8 +225,8 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		joinGameGBConstraints.gridx = 0;
 		joinGameGBConstraints.gridy = 1;
 		joinGameGBConstraints.gridheight = 1;
-		listModel = new DefaultListModel();
-		gamesList = new JList(listModel);
+		listModel = new DefaultListModel<String>();
+		gamesList = new JList<String>(listModel);
 		gamesList.addListSelectionListener(this);
 		JScrollPane scrollPane = new JScrollPane(gamesList);
 		joinGamePanel.add(scrollPane, joinGameGBConstraints);
@@ -285,7 +278,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 	{
 		frame = new JFrame("COMS4507 mental poker: Ben Evans and Emile Victor");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.setMinimumSize(new Dimension(1024,768));
+		frame.setMinimumSize(new Dimension(600,500));
 
 		SwingGUI sgui = new SwingGUI();
 
@@ -438,16 +431,18 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 				{
 					JLabel youWon = new JLabel("You won!");
 					cardScreenGBC.gridy = 5;
-					cardScreenGBC.gridx = 1;
-					cardScreenGBC.gridwidth = 1;
+					cardScreenGBC.gridx = 0;
+					cardScreenGBC.gridwidth = 5;
 					cardScreenLayout.add(youWon,cardScreenGBC);
+					cardScreenLayout.revalidate();
 					
 				} else {
-					JLabel youWon = new JLabel(winner + " won that hand.");
+					JLabel youWon = new JLabel("Sorry, you lost. The winner was " + winner + ".");
 					cardScreenGBC.gridy = 5;
-					cardScreenGBC.gridx = 1;
-					cardScreenGBC.gridwidth = 1;
+					cardScreenGBC.gridx = 0;
+					cardScreenGBC.gridwidth = 5;
 					cardScreenLayout.add(youWon,cardScreenGBC);
+					cardScreenLayout.revalidate();
 				}
 				
 				
@@ -538,11 +533,6 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 					cardScreenGBC.gridx = 1;
 					cardScreenLayout.add(card2Label,cardScreenGBC);
 				}
-				
-				//Now show the games screen
-				//frame.setSize(1024,600);
-				//CardLayout cl = (CardLayout)(cards.getLayout());
-				//cl.show(cards, cardScreenTitle);
 			
 			
 			} else if (splitString[0].equals("COMMUNITYCARDS_J1c20921098n08v290n8102v890n1203v")) {
@@ -588,7 +578,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 					cardScreenLayout.add(youWon,cardScreenGBC);
 					cardScreenLayout.revalidate();
 				} else {
-					JLabel youWon = new JLabel(splitString[1] + " won that hand.");
+					JLabel youWon = new JLabel("Sorry, you lost. The winner was " + splitString[1]  + ".");
 					cardScreenGBC.gridy = 5;
 					cardScreenGBC.gridx = 0;
 					cardScreenGBC.gridwidth = 5;
@@ -608,7 +598,6 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 	public class SearchGamesTask extends SwingWorker<ArrayList<User>, ArrayList<User>> {
 
 		public String gameHost = "";
-		private int numberOfPlayersCurrently = 0;
 		public BlockingQueue<String> waitForInstructionsBuffer = new ArrayBlockingQueue<String>(100);
 		
 		@SuppressWarnings("unchecked")

@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Security;
 import java.security.spec.InvalidKeySpecException;
+import java.util.ArrayList;
 import java.util.Random;
 
 import javax.crypto.BadPaddingException;
@@ -466,6 +467,41 @@ public class RSAService {
 
 		}
 		return encDeck;
+	}
+	
+	public boolean checkWinnersHand(User gameUser, ArrayList<User> userHands, User winner, RSAService rsaServ) throws InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+		Hand uHand = winner.getUsersHand();
+		Hand dHand;
+		EncryptedHand eHand = winner.getUsersOriginalHand();
+		BigInteger p = rsaServ.getP();
+		BigInteger q = rsaServ.getQ();
+		for (User usr: userHands){
+			if (usr.getID().equals(gameUser.getID())){
+				continue;
+			}
+			RSAService tmpRSA = new RSAService(p, q, usr.getDecryptionKey());
+			eHand = tmpRSA.decyrptEncHand(eHand);
+		}
+		dHand = rsaServ.decyrptHand(eHand);
+		
+		//now compare the hands
+		for(int i = 0; i < Hand.NUM_CARDS; i++){
+			if(dHand.data.get(i).checkIfJibberish()){
+				//cards are not valid
+				return false;
+			}
+			if (uHand.data.get(i).cardType != dHand.data.get(i).cardType){
+				return false;
+			}
+			if (!uHand.data.get(i).suit.equals(dHand.data.get(i).suit)){
+				return false;
+			}
+		}
+		System.out.println("Winners hand verified as:");
+		for(int i = 0; i < Hand.NUM_CARDS; i++){
+			System.out.println(Character.toString(dHand.data.get(i).cardType) + "-" + new String(dHand.data.get(i).suit));
+		}
+		return true;
 	}
 
 }

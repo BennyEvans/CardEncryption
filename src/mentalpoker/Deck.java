@@ -12,7 +12,7 @@ public class Deck {
 	private ArrayList<Card> cardDeck = new ArrayList<Card>();
 
 	/** The number of cards in a deck. */
-	public static final int NUM_CARDS = 52;
+	public static int NUM_CARDS = 52;
 	
 	/**
 	 * Instantiates a new deck.

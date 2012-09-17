@@ -9,6 +9,6 @@ public class Hand extends Passable<Card> implements java.io.Serializable {
 	private static final long serialVersionUID = 636623293517463050L;
 
 	/** The Constant NUM_CARDS which is the number of cards in a hand. */
-	public final static int NUM_CARDS = 2;
+	public static int NUM_CARDS = 2;
 
 }
