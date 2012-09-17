@@ -146,6 +146,7 @@ public class ComService {
 	public static final int USER_TABLE_SIGNATURE_FAILED = 3;
 	public static final int DECRYPT_REQUEST_ABUSE = 4;
 	public static final int COMMUNITY_CARDS_DIFFER = 5;
+	public static final int HAND_VERIFICATION_FAILED = 6;
 	
 
 	/** The notification handle. */
@@ -616,7 +617,7 @@ public class ComService {
 
 					byte[] hostSignature = (byte[]) e.notification.get(SIGNATURE);
 					try {
-						if (!sigServ.validateSignatureForByteArray(hostSignature, tmpBytes, gameHost.getPublicKey())){
+						if (!sigServ.validateSignatureFromByteArray(hostSignature, tmpBytes, gameHost.getPublicKey())){
 							callCheat(USER_TABLE_SIGNATURE_FAILED);
 						}
 					} catch (Exception e2) {
@@ -1206,6 +1207,8 @@ public class ComService {
 						case COMMUNITY_CARDS_DIFFER:
 							System.out.println("Reason: The community cards have been reported to be altered.");
 							break;
+						case HAND_VERIFICATION_FAILED:
+							System.out.println("Reason: The winners hand failed verification.");
 						}
 					}
 				} catch (Exception e1) {
@@ -1244,6 +1247,9 @@ public class ComService {
 			break;
 		case COMMUNITY_CARDS_DIFFER:
 			System.out.println("Reason: The community cards sent by the host are not what they should be.");
+			break;
+		case HAND_VERIFICATION_FAILED:
+			System.out.println("Reason: The winners hand failed verification.");
 			break;
 		}
 
@@ -1722,13 +1728,5 @@ public class ComService {
 		return null;
 	}
 	
-	//public void listenForWinner(){
-		//send out plaintext cards with fully encrypted cards
-		//wait for every users cards and determine the winner
-		//validate users cards by asking the winner for his/her decryption key and running the process of fully decrypting
-		//their cards - your encryption is in this so it can't be spoofed
-		
-	//}
-
 
 }
