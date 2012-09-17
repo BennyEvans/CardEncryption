@@ -285,7 +285,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 	{
 		frame = new JFrame("COMS4507 mental poker: Ben Evans and Emile Victor");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.setMinimumSize(new Dimension(400,400));
+		frame.setMinimumSize(new Dimension(1024,768));
 
 		SwingGUI sgui = new SwingGUI();
 
@@ -321,7 +321,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 
 		} else if ("hostGame".equals(arg0.getActionCommand()))
 		{
-			frame.setSize(600,340);
+			////frame.setSize(600,340);
 			CardLayout cl = (CardLayout)(cards.getLayout());
 			cl.show(cards, slotChoiceTitle);
 		} else if ("backToMainMenu".equals(arg0.getActionCommand())) {
@@ -333,7 +333,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			hgt.execute();
 			CardLayout cl = (CardLayout)(cards.getLayout());
 			cl.show(cards, hostingScreenGridLayoutTitle);
-			frame.setSize(700,700);
+			//frame.setSize(700,700);
 			
 			
 			int currentY = 2;
@@ -380,7 +380,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			cl.show(cards, joinGameScreenTitle);
 			jgt = new SearchGamesTask();
 			jgt.execute();
-			frame.setSize(700,450);
+			//frame.setSize(700,450);
 		} else if ("joinGameFromSearch".equals(arg0.getActionCommand()))
 		{
 			//System.out.println("join game button pushed?");
@@ -540,7 +540,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 				}
 				
 				//Now show the games screen
-				frame.setSize(1024,600);
+				//frame.setSize(1024,600);
 				//CardLayout cl = (CardLayout)(cards.getLayout());
 				//cl.show(cards, cardScreenTitle);
 			
@@ -572,7 +572,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 						
 						
 					}
-					frame.setSize(1024,600);
+					//frame.setSize(1024,600);
 					CardLayout cl = (CardLayout)(cards.getLayout());
 					cl.show(cards, cardScreenTitle);
 					
@@ -596,7 +596,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 					cardScreenLayout.revalidate();
 				}
 				
-				frame.setSize(1024,600);
+				//frame.setSize(1024,600);
 				
 			}
 			
