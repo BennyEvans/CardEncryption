@@ -1,7 +1,5 @@
 package mentalpoker;
 
-import java.util.Arrays;
-
 /**
  * The Class Card.
  */

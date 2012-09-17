@@ -25,8 +25,6 @@ import org.avis.client.InvalidSubscriptionException;
 
 import com.sampullara.poker.Cards;
 import com.sampullara.poker.Evaluate;
-import com.sampullara.poker.HandRank;
-import com.sampullara.poker.HandRank.Rank;
 
 /**
  * The Class Poker.
@@ -334,7 +332,13 @@ public class Poker {
 		}
 		
 		//now determine the winner and check the winners cards
+		User winner = determineWinner(comCards, userHands);
 		
+		if (!checkWinnersHand(userHands, winner, rsaService)){
+			comServ.callCheat(ComService.HAND_VERIFICATION_FAILED);
+		}
+
+		System.out.println("Winner was: " + new String(winner.getUsername()));
 		
 		Thread.sleep(2500);
 		comServ.shutdown();
@@ -446,13 +450,14 @@ public class Poker {
 		}
 		
 		//now determine the winner and check the winners cards
+		User winner = determineWinner(comCards, userHands);
 		
-		if (!checkWinnersHand(userHands, userHands.get(1), rsaService)){
+		if (!checkWinnersHand(userHands, winner, rsaService)){
 			comServ.callCheat(ComService.HAND_VERIFICATION_FAILED);
 		}
 
-		//sit and block here until everyone has said gameover
-		Thread.sleep(2500);
+		System.out.println("Winner was: " + new String(winner.getUsername()));
+		
 		comServ.shutdown();
 		return;
 	}
@@ -479,9 +484,6 @@ public class Poker {
 	 */
 	public void setUsername(String setUsernameString) throws IOException
 	{
-		//System.out.print("Enter your username: ");
-		//BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-
 		gameUser = new User(setUsernameString, sig.getPublicKey());
 	}
 	
@@ -527,7 +529,7 @@ public class Poker {
 	 * @param gU
 	 * @return
 	 */
-	public User determineWinner(CommunityCards cc, ArrayList<User> allGameUsers)
+	private User determineWinner(CommunityCards cc, ArrayList<User> allGameUsers)
 	{
 		
 
@@ -613,17 +615,6 @@ public class Poker {
 		
 
 		
-	}
-	
-	private boolean cardIsRoyal(String suit)
-	{
-		
-		if (Poker.royals.contains(suit))
-		{
-			return true;
-		} else {
-			return false;
-		}
 	}
 	
 	private boolean checkWinnersHand(ArrayList<User> userHands, User winner, RSAService rsaServ) throws InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
