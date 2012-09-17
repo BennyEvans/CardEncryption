@@ -15,8 +15,6 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
-import com.sampullara.poker.Cards;
-import com.sampullara.poker.Evaluate;
 
 import mentalpoker.ComService;
 import mentalpoker.CommunityCards;
@@ -29,6 +27,8 @@ import mentalpoker.RSAService;
 import mentalpoker.SigService;
 import mentalpoker.SwingGUI.HostGameTask;
 import mentalpoker.SwingGUI.SearchGamesTask;
+import mentalpoker.gameplay.handevaluator.Cards;
+import mentalpoker.gameplay.handevaluator.Evaluate;
 import mentalpoker.User;
 
 public class TexasHoldEmGamePlay implements GamePlay {
@@ -438,9 +438,9 @@ public class TexasHoldEmGamePlay implements GamePlay {
 
 		Cards board = new Cards(CommunityCards.NUM_CARDS);
 		for (ArrayList<String> ccard : commCardsArray) {
-			board.add(new com.sampullara.poker.Card(
-					com.sampullara.poker.Card.Rank.parse(ccard.get(CARDTYPE)),
-					com.sampullara.poker.Card.Suit.parse(ccard.get(SUIT))));
+			board.add(new mentalpoker.gameplay.handevaluator.Card(
+					mentalpoker.gameplay.handevaluator.Card.Rank.parse(ccard.get(CARDTYPE)),
+					mentalpoker.gameplay.handevaluator.Card.Suit.parse(ccard.get(SUIT))));
 		}
 
 		Cards[] allUsersCards = new Cards[allGameUsers.size()];
@@ -476,13 +476,13 @@ public class TexasHoldEmGamePlay implements GamePlay {
 
 			Cards userCards1 = new Cards(2);
 			// Adding the first card
-			userCards1.add(new com.sampullara.poker.Card(
-					com.sampullara.poker.Card.Rank.parse(card1.get(CARDTYPE)),
-					com.sampullara.poker.Card.Suit.parse(card1.get(SUIT))));
+			userCards1.add(new mentalpoker.gameplay.handevaluator.Card(
+					mentalpoker.gameplay.handevaluator.Card.Rank.parse(card1.get(CARDTYPE)),
+					mentalpoker.gameplay.handevaluator.Card.Suit.parse(card1.get(SUIT))));
 			// Second card
-			userCards1.add(new com.sampullara.poker.Card(
-					com.sampullara.poker.Card.Rank.parse(card2.get(CARDTYPE)),
-					com.sampullara.poker.Card.Suit.parse(card2.get(SUIT))));
+			userCards1.add(new mentalpoker.gameplay.handevaluator.Card(
+					mentalpoker.gameplay.handevaluator.Card.Rank.parse(card2.get(CARDTYPE)),
+					mentalpoker.gameplay.handevaluator.Card.Suit.parse(card2.get(SUIT))));
 
 			allUsersCards[usersCardsIndex++] = userCards1;
 

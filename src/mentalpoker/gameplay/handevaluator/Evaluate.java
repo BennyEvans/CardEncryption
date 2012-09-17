@@ -1,4 +1,4 @@
-package com.sampullara.poker;
+package mentalpoker.gameplay.handevaluator;
 
 import java.util.ArrayList;
 import java.util.List;

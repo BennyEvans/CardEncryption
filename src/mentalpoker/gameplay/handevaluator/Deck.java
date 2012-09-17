@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2005 Your Corporation. All Rights Reserved.
  */
-package com.sampullara.poker;
+package mentalpoker.gameplay.handevaluator;
 
 import java.util.Collections;
 

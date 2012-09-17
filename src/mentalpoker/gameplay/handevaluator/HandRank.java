@@ -1,10 +1,7 @@
 /*
 * Copyright (c) 2005 Your Corporation. All Rights Reserved.
 */
-package com.sampullara.poker;
-
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+package mentalpoker.gameplay.handevaluator;
 
 
 /**
@@ -20,8 +17,7 @@ public final class HandRank implements Comparable<HandRank> {
     private final Cards fiveCardHand;
     private Rank rank = Rank.HIGH;
     private static final int HAND_SIZE = 5;
-    private static final int TOTAL_POSSIBLE = 7;
-
+    
     public String toString() {
         return fiveCardHand + ": " + rank.name();
     }

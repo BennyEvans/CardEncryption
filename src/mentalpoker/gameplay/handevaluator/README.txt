@@ -1,0 +1,3 @@
+The package mentalpoker.gameplay.handevaluator is not our work. It was created by ......
+
+LICENCE:

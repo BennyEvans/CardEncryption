@@ -1,10 +1,9 @@
 /*
  * Copyright (c) 2005 Your Corporation. All Rights Reserved.
  */
-package com.sampullara.poker;
+package mentalpoker.gameplay.handevaluator;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 
 /**
  * User: sam
@@ -12,7 +11,10 @@ import java.util.LinkedList;
  * Time: 4:07:30 PM
  */
 public class Cards extends ArrayList<Card> {
-    public Cards(String string) {
+
+	private static final long serialVersionUID = -2822984319609229191L;
+
+	public Cards(String string) {
         addAll(Card.parse(string));
     }
 
