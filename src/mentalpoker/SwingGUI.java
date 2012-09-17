@@ -397,7 +397,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 				
 				
 				//Add the right cards to the screen
-				System.out.println(new java.io.File("").getAbsolutePath()+"src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card1+".png");
+				//System.out.println(new java.io.File("").getAbsolutePath()+"src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card1+".png");
 				BufferedImage card1Picture = ImageIO.read(new File("src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card1+".png"));
 				BufferedImage card2Picture = ImageIO.read(new File("src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card2+".png"));
 				

@@ -13,22 +13,15 @@ public class Deck {
 
 	/** The number of cards in a deck. */
 	public static final int NUM_CARDS = 52;
-
-	/** The card types. */
-	private static char[] cardTypes = { '2', '3', '4', '5', '6', '7', '8', '9',
-			'T', 'J', 'Q', 'K', 'A' };
-
-	/** The suits. */
-	private static String[] suits = { "spades", "hearts", "diamonds", "clubs" };
-
+	
 	/**
 	 * Instantiates a new deck.
 	 */
 	public Deck() {
 		// generate the 52 cards and shuffle them
-		for (int i = 0; i < suits.length; i++) {
-			for (int j = 0; j < cardTypes.length; j++) {
-				Card card = new Card(cardTypes[j], suits[i]);
+		for (int i = 0; i < Card.SUITS.length; i++) {
+			for (int j = 0; j < Card.CARD_TYPES.length; j++) {
+				Card card = new Card(Card.CARD_TYPES[j], Card.SUITS[i]);
 				cardDeck.add(card);
 			}
 		}

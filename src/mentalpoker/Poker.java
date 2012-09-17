@@ -1,6 +1,7 @@
 package mentalpoker;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -441,6 +442,9 @@ public class Poker {
 		
 		//now determine the winner and check the winners cards
 		
+		if (!checkWinnersHand(userHands, userHands.get(1), rsaService)){
+			com.callCheat(ComService.HAND_VERIFICATION_FAILED);
+		}
 
 		//sit and block here until everyone has said gameover
 		Thread.sleep(2500);
@@ -692,6 +696,41 @@ public class Poker {
 		} else {
 			return false;
 		}
+	}
+	
+	private boolean checkWinnersHand(ArrayList<User> userHands, User winner, RSAService rsaServ) throws InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+		Hand uHand = winner.getUsersHand();
+		Hand dHand;
+		EncryptedHand eHand = winner.getUsersOriginalHand();
+		BigInteger p = rsaServ.getP();
+		BigInteger q = rsaServ.getQ();
+		for (User usr: userHands){
+			if (usr.getID().equals(gameUser.getID())){
+				continue;
+			}
+			RSAService tmpRSA = new RSAService(p, q, usr.getDecryptionKey());
+			eHand = tmpRSA.decyrptEncHand(eHand);
+		}
+		dHand = rsaServ.decyrptHand(eHand);
+		
+		//now compare the hands
+		for(int i = 0; i < Hand.NUM_CARDS; i++){
+			if(dHand.data.get(i).checkIfJibberish()){
+				//cards are not valid
+				return false;
+			}
+			if (uHand.data.get(i).cardType != dHand.data.get(i).cardType){
+				return false;
+			}
+			if (!uHand.data.get(i).suit.equals(dHand.data.get(i).suit)){
+				return false;
+			}
+		}
+		System.out.println("Winners hand verified as:");
+		for(int i = 0; i < Hand.NUM_CARDS; i++){
+			System.out.println(Character.toString(dHand.data.get(i).cardType) + "-" + new String(dHand.data.get(i).suit));
+		}
+		return true;
 	}
 	
 }
