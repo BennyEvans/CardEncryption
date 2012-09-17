@@ -23,6 +23,11 @@ import mentalpoker.SwingGUI.SearchGamesTask;
 
 import org.avis.client.InvalidSubscriptionException;
 
+import com.sampullara.poker.Cards;
+import com.sampullara.poker.Evaluate;
+import com.sampullara.poker.HandRank;
+import com.sampullara.poker.HandRank.Rank;
+
 /**
  * The Class Poker.
  */
@@ -40,7 +45,7 @@ public class Poker {
 	
 	private static SigService sig;
 	/** The com. */
-	ComService com;
+	ComService comServ;
 
 
 	/**
@@ -68,7 +73,7 @@ public class Poker {
 		//return;
 
 		setUsername(username);
-		com = new ComService(gameUser, "elvin://elvin.students.itee.uq.edu.au", sig);
+		comServ = new ComService(gameUser, "elvin://elvin.students.itee.uq.edu.au", sig);
 		//StartGame();
 		return;
 
@@ -97,12 +102,12 @@ public class Poker {
 		ArrayList<User> gameUsers = null;
 		if (isGameHost)
 		{
-			gameUsers = com.startNewGame(slots, hgt);
+			gameUsers = comServ.startNewGame(slots, hgt);
 		}
 		
 		if (gameUsers == null){
 			//could call startGame() here but exit is good enough for now
-			com.shutdown();
+			comServ.shutdown();
 			System.exit(1);
 			return null;
 		}
@@ -131,7 +136,7 @@ public class Poker {
 		EncryptedCommunityCards originalEncCommunityCards;
 
 		//broadcast p and q
-		com.broadcastPQ(rsaService.getP(), rsaService.getQ(), gameUsers.size());
+		comServ.broadcastPQ(rsaService.getP(), rsaService.getQ(), gameUsers.size());
 		System.out.println(rsaService.getP().toString() + "\n" + rsaService.getQ().toString());
 		//create and encrypt the deck
 		encDeck = createDeck(rsaService);
@@ -146,12 +151,12 @@ public class Poker {
 				sig.createSignature(encDeck);
 				
 				//request user to encrypt the deck
-				encDeck = com.requestEncDeck(tmpUser, encDeck);
+				encDeck = comServ.requestEncDeck(tmpUser, encDeck);
 				
 				//check the reply was from the user
 				if (!sig.validateSignature(encDeck, tmpUser.getPublicKey())){
-					com.callCheat(ComService.SIGNATURE_FAILED);
-					com.shutdown();
+					comServ.callCheat(ComService.SIGNATURE_FAILED);
+					comServ.shutdown();
 					System.exit(2);
 				}
 			}
@@ -162,10 +167,10 @@ public class Poker {
 		System.out.println("All Users have encrypted the deck!");
 		
 		//take requests to decrypt a hand
-		com.decryptEncryptedHands(rsaService, gameUsers.size()-1);
+		comServ.decryptEncryptedHands(rsaService, gameUsers.size()-1);
 		
 		//subscribe to notifications for users have their decrypted hands
-		com.subscribeUsersFinished(ComService.FINISHED_DEC_HAND);
+		comServ.subscribeUsersFinished(ComService.FINISHED_DEC_HAND);
 		
 		//choose random cards for each user
 		ArrayList<Integer> chosenCards = new ArrayList<Integer>();
@@ -195,7 +200,7 @@ public class Poker {
 			} else {
 				//send the hand to the user
 				sig.createSignature(hand);
-				com.sendEncryptedHand(tmpUser, hand);
+				comServ.sendEncryptedHand(tmpUser, hand);
 			}
 		}
 		
@@ -209,7 +214,7 @@ public class Poker {
 			User tmpUser = usr.next();
 			if (!tmpUser.getID().equals(gameUser.getID())){
 				sig.createSignature(myHand);
-				myHand = com.requestDecryptHand(myHand, tmpUser);
+				myHand = comServ.requestDecryptHand(myHand, tmpUser);
 			}
 			
 		}
@@ -246,28 +251,28 @@ public class Poker {
 		sig.createSignature(encComCards);
 		
 		//sit and block here until everyone has their plaintext cards
-		if (!com.blockUntilUsersFinished()){
+		if (!comServ.blockUntilUsersFinished()){
 			System.out.println("Timeout!");
-			com.shutdown();
+			comServ.shutdown();
 			System.exit(0);
 		}
 		
 		//now stop decrypting hands
-		com.stopDecryptingHands();
+		comServ.stopDecryptingHands();
 		
 		//subscribe to next lot of notifications
-		com.decryptCommunityCards(rsaService, gameUsers.size()-1, true);
-		com.subscribeUsersFinished(ComService.FINISHED_DEC_COM_CARDS);
+		comServ.decryptCommunityCards(rsaService, gameUsers.size()-1, true);
+		comServ.subscribeUsersFinished(ComService.FINISHED_DEC_COM_CARDS);
 		
 		//send out community cards
-		com.sendEncryptedComCards(encComCards);
+		comServ.sendEncryptedComCards(encComCards);
 		//System.out.println(new String(encComCards.data.get(0).cardData));
 		
 		for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
 			User tmpUser = usr.next();
 			if (!tmpUser.getID().equals(gameUser.getID())){
 				sig.createSignature(encComCards);
-				encComCards = com.requestDecryptComCards(encComCards, tmpUser);
+				encComCards = comServ.requestDecryptComCards(encComCards, tmpUser);
 			} else {
 				User duplicateUser = new User(gameUser.getUsername(), gameUser.getID(), gameUser.getPublicKey());
 				encComCards.addUserToDecryptedTable(duplicateUser);
@@ -286,36 +291,36 @@ public class Poker {
 			
 		}
 		
-		if (!com.blockUntilUsersFinished()){
+		if (!comServ.blockUntilUsersFinished()){
 			System.out.println("Timeout!");
-			com.shutdown();
+			comServ.shutdown();
 			System.exit(0);
 		}
 		
 		hgt.publishDelegate(cardsMessageSentBackToHost);
 		
 		//now stop decrypting community cards
-		com.stopDecryptingComCards();
+		comServ.stopDecryptingComCards();
 		
 		//start listening for users hands
-		com.listenUsersHands();
+		comServ.listenUsersHands();
 		
 		//send out the community cards
 		sig.createSignature(comCards);
 		System.out.println("Sending Raw Community cards!");
-		com.sendRawCommunityCards(comCards);
+		comServ.sendRawCommunityCards(comCards);
 		System.out.println("Users all agreed with community cards!");
 		
 		//this is a protection mechanism for 2 player games
 		// on > 2 player games users protect one another
-		if (!com.getFirstUsersCommunityCards().compareCards(originalEncCommunityCards)){
-			com.callCheat(ComService.DECRYPT_REQUEST_ABUSE);
+		if (!comServ.getFirstUsersCommunityCards().compareCards(originalEncCommunityCards)){
+			comServ.callCheat(ComService.DECRYPT_REQUEST_ABUSE);
 		}
 		
 		//now broadcast you hand and wait for other hands
-		com.broadcastMyHand(gameUser);
+		comServ.broadcastMyHand(gameUser);
 		
-		ArrayList<User> userHands = com.blockUntilHaveUsersHands();
+		ArrayList<User> userHands = comServ.blockUntilHaveUsersHands();
 		for (int i = 0; i < userHands.size(); i++){
 			User tmpUser = userHands.get(i);
 			Hand tmpHand = tmpUser.getUsersHand();
@@ -332,14 +337,14 @@ public class Poker {
 		
 		
 		Thread.sleep(2500);
-		com.shutdown();
+		comServ.shutdown();
 		return;
 	}
 	
 	
 	
 	public void playGameAsPlayer(ArrayList<User> gameUsers, SearchGamesTask jgt) throws InvalidSubscriptionException, InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException, InterruptedException, IOException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
-		RSAService rsaService = com.waitPQ();
+		RSAService rsaService = comServ.waitPQ();
 		gameUser.setDecryptionKey(rsaService.getD());
 		EncryptedHand myHand;
 		EncryptedCommunityCards encComCards;
@@ -347,14 +352,14 @@ public class Poker {
 		PublicKey gameHostsPubKey = gameUsers.get(0).getPublicKey();
 
 		//take requests to decrypt a hand
-		com.decryptEncryptedHands(rsaService, gameUsers.size()-1);
+		comServ.decryptEncryptedHands(rsaService, gameUsers.size()-1);
 		
 		//need to pass in the game hosts public key... the game host 
-		com.waitEncryptedDeck(rsaService, gameHostsPubKey);
+		comServ.waitEncryptedDeck(rsaService, gameHostsPubKey);
 		System.out.println("Got encrypted deck and encrypted again with my key.");
 		
 		//wait for cards
-		myHand = com.waitEncryptedHand();
+		myHand = comServ.waitEncryptedHand();
 		gameUser.setUsersOriginalHand(myHand);
 		
 		System.out.println("Got my cards!");
@@ -367,7 +372,7 @@ public class Poker {
 			User tmpUser = usr.next();
 			if (!tmpUser.getID().equals(gameUser.getID())){
 				sig.createSignature(myHand);
-				myHand = com.requestDecryptHand(myHand, tmpUser);
+				myHand = comServ.requestDecryptHand(myHand, tmpUser);
 			}
 			
 		}
@@ -383,20 +388,20 @@ public class Poker {
 		jgt.waitForInstructionsBuffer.put(card2);
 		
 		//subscribe to next lot of notification
-		com.decryptCommunityCards(rsaService, gameUsers.size()-1, false);
+		comServ.decryptCommunityCards(rsaService, gameUsers.size()-1, false);
 		
 		//notify have hand and wait for community cards
-		encComCards = com.listenForCommunityCards();
+		encComCards = comServ.listenForCommunityCards();
 		
 		//now stop decrypting hands
-		com.stopDecryptingHands();
+		comServ.stopDecryptingHands();
 		
 		//start decrypting the community cards
 		for (Iterator<User> usr = gameUsers.iterator(); usr.hasNext();){
 			User tmpUser = usr.next();
 			if (!tmpUser.getID().equals(gameUser.getID())){
 				sig.createSignature(encComCards);
-				encComCards = com.requestDecryptComCards(encComCards, tmpUser);
+				encComCards = comServ.requestDecryptComCards(encComCards, tmpUser);
 			} else {
 				User duplicateUser = new User(gameUser.getUsername(), gameUser.getID(), gameUser.getPublicKey());
 				encComCards.addUserToDecryptedTable(duplicateUser);
@@ -413,21 +418,21 @@ public class Poker {
 		}
 
 		//start listening for users hands
-		com.listenUsersHands();
+		comServ.listenUsersHands();
 		
 		//verify community cards
 		System.out.println("Verifying community cards!");
-		com.verifyCommunityCards(comCards);
+		comServ.verifyCommunityCards(comCards);
 		System.out.println("Community cards verified!");
 		
 		//now stop decrypting community cards
-		com.stopDecryptingComCards();
+		comServ.stopDecryptingComCards();
 		
 		jgt.waitForInstructionsBuffer.put(communityCardsToBeSentToJoiner);
 		
 		//now broadcast you hand and wait for other hands
-		com.broadcastMyHand(gameUser);
-		ArrayList<User> userHands = com.blockUntilHaveUsersHands();
+		comServ.broadcastMyHand(gameUser);
+		ArrayList<User> userHands = comServ.blockUntilHaveUsersHands();
 		for (int i = 0; i < userHands.size(); i++){
 			User tmpUser = userHands.get(i);
 			Hand tmpHand = tmpUser.getUsersHand();
@@ -443,12 +448,12 @@ public class Poker {
 		//now determine the winner and check the winners cards
 		
 		if (!checkWinnersHand(userHands, userHands.get(1), rsaService)){
-			com.callCheat(ComService.HAND_VERIFICATION_FAILED);
+			comServ.callCheat(ComService.HAND_VERIFICATION_FAILED);
 		}
 
 		//sit and block here until everyone has said gameover
 		Thread.sleep(2500);
-		com.shutdown();
+		comServ.shutdown();
 		return;
 	}
 	
@@ -525,7 +530,7 @@ public class Poker {
 	public User determineWinner(CommunityCards cc, ArrayList<User> allGameUsers)
 	{
 		
-		//Hand ranks
+
 		
 		/**
 		 * Royal flush (ace-high straight of one suit)
@@ -549,6 +554,16 @@ public class Poker {
 			commCardsArray.add(card);	
 		}
 			
+		Cards board = new Cards(5);
+		for (ArrayList<String> ccard : commCardsArray)
+		{
+			board.add(new com.sampullara.poker.Card(com.sampullara.poker.Card.Rank.parse(ccard.get(Poker.CARDTYPE)),
+					com.sampullara.poker.Card.Suit.parse(ccard.get(Poker.SUIT))));
+		}
+			
+		Cards[] allUsersCards = new Cards[]{};
+		
+		int usersCardsIndex = 0;	
 		for (User u:allGameUsers)
 		{
 			/**
@@ -572,127 +587,38 @@ public class Poker {
 			userCards.add(card2);
 			
 			/**
-			 * Check for royal flush
+			 * Using the pokerengine made available by Sam Pullara
 			 */
 			
-			//First check that we have 5 cards which are royal
+			Cards userCards1 = new Cards(2);
+			//Adding the first card
+			userCards1.add(new com.sampullara.poker.Card(com.sampullara.poker.Card.Rank.parse(card1.get(Poker.CARDTYPE)),
+					com.sampullara.poker.Card.Suit.parse(card1.get(Poker.SUIT))));
+			//Second card
+			userCards1.add(new com.sampullara.poker.Card(com.sampullara.poker.Card.Rank.parse(card2.get(Poker.CARDTYPE)),
+					com.sampullara.poker.Card.Suit.parse(card2.get(Poker.SUIT))));
 			
-			int numberOfRoyals = 0;
-
-			ArrayList<ArrayList<String>> potentialCards = new ArrayList<ArrayList<String>>();
- 			for (ArrayList<String> card: userCards)
- 			{
- 				if (cardIsRoyal(card.get(this.CARDTYPE)))
- 				{
- 					numberOfRoyals++;
- 					potentialCards.add(card);
- 				}
- 			}
- 			
- 			for (ArrayList<String> commCardString: commCardsArray)
- 			{
- 				if (cardIsRoyal(commCardString.get(this.CARDTYPE)))
- 				{
- 					numberOfRoyals++;
- 					potentialCards.add(commCardString);
- 				}
- 			}
- 			
- 			boolean isThisARoyalFlush = false;
- 			
- 			//If there are enough potential royals, continue 
- 			if (numberOfRoyals >= 5)
- 			{
- 				String firstCardSuit = potentialCards.get(0).get(this.SUIT);
- 				//Check every card is in the same suit.
- 				boolean allCardsInSameSuit = true;
- 				for (ArrayList<String> potCard: potentialCards)
- 				{
- 					if (!potCard.get(this.SUIT).equals(firstCardSuit))
- 					{
- 						allCardsInSameSuit = false;
- 						break;
- 					}
- 				}
- 				
- 				/**
- 				 * If we have gone over all the cards, and they are all royals, AND are all in the same suit
- 				 * Then we are guaranteed that 
- 				 */
- 				//If we've gone over all the cards, and they are all royals, AND are all in the same suit
- 				
- 				if (allCardsInSameSuit)
- 				{
- 					//This user is the winner, assuming that you cannot have multiple royal flushes from the same dispersement
- 					//of cards.
- 					return u;
- 				}
- 			} else {
- 				isThisARoyalFlush = false;
- 			}
- 			
- 			/**
- 			 * Straight flush
- 			 * (straight of entirely one suit)
- 			 */
- 			
- 			//Check all cards (both in the user's hand and in community cards), check that there are 
- 			//5 of one suit.
- 			Map<String,Integer> suitFrequency = new HashMap<String,Integer>();
- 			
- 			suitFrequency.put("spades",0);
- 			suitFrequency.put("hearts",0);
- 			suitFrequency.put("diamonds",0);
- 			suitFrequency.put("clubs",0);
- 			for (ArrayList<String> card: userCards)
- 			{
- 				int tempScore = ( suitFrequency.get(card.get(this.CARDTYPE)))+1;
- 				
- 				suitFrequency.put(card.get(this.CARDTYPE),tempScore);
- 			}
- 			
- 			for (ArrayList<String> commCardString: commCardsArray)
- 			{
- 				int tempScore = ( suitFrequency.get(commCardString.get(this.CARDTYPE)))+1;
- 				
- 				suitFrequency.put(commCardString.get(this.CARDTYPE),tempScore);
- 			}
- 			
- 			//Check whether one is greater than 5.
- 			for (int indivFrequency : suitFrequency.values())
- 			{
- 				if (indivFrequency >= 5)
- 				{
- 					//Now that we know that there are at least 5 cards of the same type, 
- 				} else {
- 					
- 				}
- 			}
- 			
- 			
- 			
- 			//suitFrequency now contains the frequency of suits in the user's hand as well as
- 			//in the community cards. We can use this to determine if a straight flush can exist.
- 			
- 			
- 			
- 			
- 			
- 			
- 			
+			allUsersCards[usersCardsIndex++] = userCards1;
+			
 		}
 		
-		//No winner (WE SHOULD NEVER GET TO THIS POINT!)
-		System.err.println("No winner was found, there is a bug in determineWinner");
-		return null;
-	
+		double[] odds = Evaluate.evaluateWinningOdds(allUsersCards, board, new Cards());
+		
+		Map<Object,User> userRankings = new HashMap<Object,User>();	
+		for (int cardIndex = 0; cardIndex < allGameUsers.size(); cardIndex++) {
+			userRankings.put(new Double(odds[cardIndex]), allGameUsers.get(cardIndex));
+		}
+		
+		return (User) userRankings.values().toArray()[0];
+		
+
 		
 	}
 	
 	private boolean cardIsRoyal(String suit)
 	{
 		
-		if (this.royals.contains(suit))
+		if (Poker.royals.contains(suit))
 		{
 			return true;
 		} else {

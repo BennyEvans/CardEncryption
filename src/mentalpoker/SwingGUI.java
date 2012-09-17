@@ -572,6 +572,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		private int numberOfPlayersCurrently = 0;
 		public BlockingQueue<String> waitForInstructionsBuffer = new ArrayBlockingQueue<String>(100);
 		
+		@SuppressWarnings("unchecked")
 		public void publishDelegate(ArrayList<User> availableGames)
 		{
 			this.publish(availableGames);
@@ -579,7 +580,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		
 		@Override
 		protected ArrayList<User> doInBackground() throws Exception {
-			ArrayList<User> userListLocal = SwingGUI.poker.com.joinGameOffMenu(this);
+			ArrayList<User> userListLocal = SwingGUI.poker.comServ.joinGameOffMenu(this);
 			SwingGUI.poker.playGameAsPlayer(userListLocal,jgt);
 			return userListLocal;
 		}

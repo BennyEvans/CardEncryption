@@ -31,7 +31,7 @@ public final class Card implements Comparable<Card> {
     public enum Suit {
         CLUBS, DIAMONDS, HEARTS, SPADES;
 
-        private final String[] suitStrings = {"c", "d", "h", "s"};
+        private final String[] suitStrings = {"clubs", "diamonds", "hearts", "spades"};
 
         public String toString() {
             return suitStrings[this.ordinal()];
