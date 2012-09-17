@@ -614,12 +614,13 @@ public class Poker {
 		
 		Map<Object,User> userRankings = new HashMap<Object,User>();	
 		for (int cardIndex = 0; cardIndex < allGameUsers.size(); cardIndex++) {
-			userRankings.put(new Double(odds[cardIndex]), allGameUsers.get(cardIndex));
-		}
+			if (odds[cardIndex] == 1.0d){
+				return allGameUsers.get(cardIndex);
+			}
+		}	
 		
-		return (User) userRankings.values().toArray()[0];
-		
-
+		//something went wrong
+		return null;
 		
 	}
 	
