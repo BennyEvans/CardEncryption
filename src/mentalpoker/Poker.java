@@ -659,6 +659,8 @@ public class Poker {
  			{
  				if (indivFrequency >= 5)
  				{
+ 					//Now that we know that there are at least 5 cards of the same type, 
+ 				} else {
  					
  				}
  			}
