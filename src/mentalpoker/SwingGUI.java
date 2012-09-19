@@ -47,7 +47,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 	protected static JFrame frame;
 	protected static JFrame joinOrHostGameFrame;
 	static Poker poker;
-	static JComboBox<?> numberOfSlots;
+	static JComboBox numberOfSlots;
 	private JPanel slotChoiceLayout;
 	private JPanel joinOrHostPagePanel;
 	private JLabel warning;
@@ -58,8 +58,8 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 	private GridBagConstraints hostGameGBConstraints;
 	private GridBagConstraints joinGameGBConstraints;
 	private JPanel joinGamePanel;
-	private DefaultListModel<String> listModel;
-	private JList<String> gamesList;
+	private DefaultListModel listModel;
+	private JList gamesList;
 	private JTextField nameofHosterField;
 	private GridBagConstraints cardScreenGBC;
 	private JPanel cardScreenLayout;
@@ -225,8 +225,8 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		joinGameGBConstraints.gridx = 0;
 		joinGameGBConstraints.gridy = 1;
 		joinGameGBConstraints.gridheight = 1;
-		listModel = new DefaultListModel<String>();
-		gamesList = new JList<String>(listModel);
+		listModel = new DefaultListModel();
+		gamesList = new JList(listModel);
 		gamesList.addListSelectionListener(this);
 		JScrollPane scrollPane = new JScrollPane(gamesList);
 		joinGamePanel.add(scrollPane, joinGameGBConstraints);
