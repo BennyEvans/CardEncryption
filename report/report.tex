@@ -24,17 +24,29 @@ While the application is quite effective at what it does, there remain a couple 
 
 \section {Purpose}
 
-The intent of the mental poker application was to provide a safe and reliable way of dealing hands over the internet, without having to rely on a central server. While this paradigm isn't entirely met (the communications system utilises a central Elvin server), all elements barring the communications subsystem follow the description of such a system on the "Mental Poker" wikipedia page.
+The intent of the mental poker application was to provide a safe and reliable way of dealing hands over the internet, without having to rely on a central server. While this paradigm isn't entirely met (the communications system utilises a central Elvin server), all elements barring the communications subsystem follow the description of such a system on the "Mental Poker" wikipedia page.\\
 
 \section{Implementation}
 
+The Mental Poker application consists of x lines of Java code, which are available at (https://github.com/BennyEvans/CardEncryption). It utilises multithreading through Swingworkers, the Swing GUI framework, the UQ-designed Elvin notification subsystem and a fairly large amount of homespun encryption code.
+
 \subsection{Encryption}
+
+
 
 \subsection{Communications Subsystem}
 
+Elvin is utilised for all inter-player communication. It utilises the UQ elvin server, and transmits pre-encrypted text strings and binary representing cards for each user, along with game information and hosting information. Hosts simply enter a loop sending out notifications every few sections that they have a game available. Players wishing to join listen for these messages and receive a list of available hosts to join. When they choose to join, they are put into a lobby where they wait until all slots are filled. The host is able to watch while slots are filled up in their GUI.
+
 \subsection{GUI}
 
+\subsection {Inter-thread communication}
+
+The application utilises a communication of string worker string communication and ArrayBlockingQueues in order to transfer objects of different types to the UI.
+
 \subsection{Card Evaluation}
+
+We are utilising the poker engine written by Sam Pullara to perform card evaluation. While card evaluation is not within the scope of the assessment, we believed that it would be a good feature to include. With this engine, we are able to determine the winner of the game, based on the card hands dealt to each player. This information is then displayed on the GUI.
 
 \section{Remaining security concerns}
 \label{sec:securityConcerns}
