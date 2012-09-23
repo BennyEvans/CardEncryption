@@ -16,9 +16,15 @@
 
 \section{Abstract}
 
-The Mental Poker application provides a decentralised method of poker hand distribution over the internet for a 7-card Texas Holdem game. The application makes use of 
+The Mental Poker application provides a decentralised method of poker hand distribution over the internet for a 7-card Texas Holdem game. The application makes use of RSA encryption and signing of individual cards to prevent cheating, and is able to abort a game if any cheating is detected.\\
+
+All gameplay is performed in a background thread, and the results are displayed on screen. All functionality relating to game joining and hosting is also visualised on the GUI.\\
+
+While the application is quite effective at what it does, there remain a couple of vulnerabilities which are inherent in the design choices made during its construction. They are outlined in section \ref{sec:securityConcerns} in detail.
 
 \section {Purpose}
+
+The intent of the mental poker application was to provide a safe and reliable way of dealing hands over the internet, without having to rely on a central server. While this paradigm isn't entirely met (the communications system utilises a central Elvin server), all elements barring the communications subsystem follow the description of such a system on the "Mental Poker" wikipedia page.
 
 \section{Implementation}
 
@@ -31,6 +37,9 @@ The Mental Poker application provides a decentralised method of poker hand distr
 \subsection{Card Evaluation}
 
 \section{Remaining security concerns}
+\label{sec:securityConcerns}
+
+\section{Conclusions}
 
 
 
