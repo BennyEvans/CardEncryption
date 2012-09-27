@@ -40,7 +40,10 @@ import javax.swing.event.ListSelectionListener;
 public class SwingGUI extends JPanel implements ActionListener, ListSelectionListener {
 
 	private static final long serialVersionUID = -3047811815984570792L;
+	
+	/** The cards, allowing us to change the current page at will **/
 	JPanel cards;
+	
 	protected JTextField usernameField;
 	protected JButton startButton;
 	protected JLabel usernameLabel;
@@ -64,7 +67,8 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 	private GridBagConstraints cardScreenGBC;
 	private JPanel cardScreenLayout;
 	private BufferedImage titleImage;
-	//Names of the panes
+	
+	/** Names of different card/panes, allowing us to quickly switch to them **/
 	final static String usernameInputTitle = "usernameInputPane";
 	final static String joinOrHostTitle = "joinOrHostPane";
 	final static String slotChoiceTitle = "slotChoiceTitle";
@@ -72,7 +76,11 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 	final static String joinGameScreenTitle = "joinGameScreenTitle";
 	final static String cardScreenTitle = "cardScreenTitle";
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	/**
+	 * Creating the GUI on multiple cards, while allowing addressing of individual elements via
+	 * class variables.
+	 * @param pane The GUI's main pane to add elements to.
+	 */
 	public void addComponentToPane(Container pane)
 	{
 		//Set up the title image for reuse.
@@ -99,8 +107,6 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		
 		JRootPane rootPane = frame.getRootPane();
 	    rootPane.setDefaultButton(startButton);
-		
-
 
 		JPanel usernameInputPaneGridLayout = new JPanel(new GridLayout(0,1));
 		usernameInputPaneGridLayout.add(titleImageLabel);
@@ -182,8 +188,6 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		hostGameGBConstraints.gridx = 0;
 		hostGameGBConstraints.gridy = 1;
 		
-		//constr.ipadx = 30;
-		//constr.ipady = 20;
 		hostingScreenGridLayout.add(nowHosting,hostGameGBConstraints);
 		hostGameGBConstraints.gridwidth = 1;
 		userButtons = new ArrayList<JButton>();
@@ -210,14 +214,13 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		joinGamePanel.add(mainMenuButton,joinGameGBConstraints);
 		
 		JLabel joinGameTitle = new JLabel("Available games will appear below");
-		//joinGameGBConstraints.gridwidth = 3;
 		joinGameGBConstraints.gridx = 1;
 		joinGameGBConstraints.gridy = 0;
 		joinGameGBConstraints.weighty = 1; //Move this to the bottom right element when it is added
 		joinGameGBConstraints.weightx = 1; //Move this to the bottom right element when it is added
 		joinGamePanel.add(joinGameTitle, joinGameGBConstraints);
 		
-		//! Set up the list
+		// Set up the "join game" list
 		
 		joinGameGBConstraints.gridwidth = 4;
 		joinGameGBConstraints.ipadx = 400;
@@ -290,6 +293,9 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 	}
 
 
+	/**
+	 * This method allows navigation via button clicks.
+	 */
 	@Override
 	public void actionPerformed(ActionEvent arg0) {
 		if ("setUsername".equals(arg0.getActionCommand()))
@@ -297,13 +303,13 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			String username = usernameField.getText();
 			if (!username.equals(""))
 			{
-				//usernameAccepted(username);
 				CardLayout cl = (CardLayout)(cards.getLayout());
 				cl.show(cards, joinOrHostTitle);
+				
+				//Join the poker game
 				try {
 					poker = new Poker(username);
 				} catch (Exception e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 
@@ -314,7 +320,6 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 
 		} else if ("hostGame".equals(arg0.getActionCommand()))
 		{
-			////frame.setSize(600,340);
 			CardLayout cl = (CardLayout)(cards.getLayout());
 			cl.show(cards, slotChoiceTitle);
 		} else if ("backToMainMenu".equals(arg0.getActionCommand())) {
@@ -326,7 +331,6 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			hgt.execute();
 			CardLayout cl = (CardLayout)(cards.getLayout());
 			cl.show(cards, hostingScreenGridLayoutTitle);
-			//frame.setSize(700,700);
 			
 			
 			int currentY = 2;
@@ -350,7 +354,6 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 					hostGameGBConstraints.fill = GridBagConstraints.HORIZONTAL;
 					userButtons.get(i).setText("EMPTY\n SLOT");
 					hostingScreenGridLayout.add(userButtons.get(i), hostGameGBConstraints);
-					//System.out.println(hostGameGBConstraints.gridx + " " + hostGameGBConstraints.gridy);
 				} else {
 					currentX = 0;
 					currentY++;
@@ -359,7 +362,6 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 					hostGameGBConstraints.fill = GridBagConstraints.HORIZONTAL;
 					userButtons.get(i).setText("EMPTY\n SLOT");
 					hostingScreenGridLayout.add(userButtons.get(i), hostGameGBConstraints);
-					//System.out.println(hostGameGBConstraints.gridx + " " + hostGameGBConstraints.gridy);
 				}
 				
 				
@@ -373,10 +375,8 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			cl.show(cards, joinGameScreenTitle);
 			jgt = new SearchGamesTask();
 			jgt.execute();
-			//frame.setSize(700,450);
 		} else if ("joinGameFromSearch".equals(arg0.getActionCommand()))
 		{
-			//System.out.println("join game button pushed?");
 			try {
 				jgt.waitForInstructionsBuffer.put(nameofHosterField.getText());
 				Thread.sleep(500);
@@ -390,7 +390,6 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 				
 				
 				//Add the right cards to the screen
-				//System.out.println(new java.io.File("").getAbsolutePath()+"src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card1+".png");
 				BufferedImage card1Picture = ImageIO.read(new File("src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card1+".png"));
 				BufferedImage card2Picture = ImageIO.read(new File("src"+File.separator+"mentalpoker"+File.separator+"images"+File.separator+card2+".png"));
 				
@@ -424,7 +423,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 					
 				}
 				
-				
+				//We use an ArrayBlockingQueue to transfer some info from the Swingworker to the GUI
 				String winner = jgt.waitForInstructionsBuffer.take();
 				
 				if (winner.equals(poker.getGameUser().getUsername()))
@@ -461,6 +460,11 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		}
 	}
 
+	/**
+	 * The swingworker which handles a host's game.
+	 * This will run the actual program in a background thread, while 
+	 *
+	 */
 	public class HostGameTask extends SwingWorker<ArrayList<User>, String> {
 
 		private int numberOfPlayersCurrently = 0;
@@ -468,6 +472,10 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		
 		public BlockingQueue<String> waitForInstructionsBuffer = new ArrayBlockingQueue<String>(100);
 		
+		/**
+		 * This is necessary, as it is impossible to call publish() via the HostGameTask object
+		 * which is passed to various child objects.
+		 */
 		public void publishDelegate(String message)
 		{
 			this.publish(message);
@@ -491,7 +499,12 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			return null;
 		}
 
-
+		/**
+		 * This function takes all messages (strings) sent back from the swingworker background task
+		 * and checks for certain situations - within this section, there are some unique "sentinel" strings
+		 * which serve to guarantee that the message is what we want, and not someone's username (or something
+		 * equally as random).
+		 */
 		@Override
 		protected void process(List<String> messages) {
 			String latestMessage = messages.get(messages.size()-1);
@@ -501,6 +514,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			{
 				//Ignore me
 			} else if (splitString[1].equals("connected...")){
+				//Someone connected to the host, update the screen.
 				String username = splitString[0];
 				numberOfPlayersCurrently++;
 				userButtons.get(numberOfPlayersCurrently-1).setText(username);
@@ -509,6 +523,7 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			
 			if (splitString[0].equals("HAVECARDS1c2n90801280c498n12904c80912c490102984nc1"))
 			{
+				//The host has their cards, display them on the UI.
 				String card1 = splitString[1];
 				String card2 = splitString[2];
 				BufferedImage card1Picture = null;
@@ -536,12 +551,14 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			
 			
 			} else if (splitString[0].equals("COMMUNITYCARDS_J1c20921098n08v290n8102v890n1203v")) {
+				//We have received all of the community cards, display them on screen.
 				JLabel communityCardsLabel = new JLabel("Community cards:");
 				cardScreenGBC.gridy = 3;
 				cardScreenGBC.gridx = 0;
 				cardScreenGBC.gridwidth = 5;
 				cardScreenLayout.add(communityCardsLabel,cardScreenGBC);
 				
+				//For each card, add it to the screen.
 				for (int i = 1; i < splitString.length; i++)
 				{
 					BufferedImage ccard1Image = null;
@@ -562,13 +579,14 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 						
 						
 					}
-					//frame.setSize(1024,600);
+					//Change to the (currently hidden) final screen (with results).
 					CardLayout cl = (CardLayout)(cards.getLayout());
 					cl.show(cards, cardScreenTitle);
 					
 				}
 			} else if (splitString[0].equals("WINNER189290128490182498124kjsafdl"))
 			{
+				//Check whether or not the winner is *me*
 				if (splitString[1].equals(poker.getGameUser().getUsername()))
 				{
 					JLabel youWon = new JLabel("You won!");
@@ -586,7 +604,6 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 					cardScreenLayout.revalidate();
 				}
 				
-				//frame.setSize(1024,600);
 				
 			}
 			
@@ -595,11 +612,20 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 		}
 	}
 	
+	/**
+	 * Another swingworker which will search for available games.
+	 * @author emilevictor
+	 *
+	 */
 	public class SearchGamesTask extends SwingWorker<ArrayList<User>, ArrayList<User>> {
 
 		public String gameHost = "";
 		public BlockingQueue<String> waitForInstructionsBuffer = new ArrayBlockingQueue<String>(100);
 		
+		/**
+		 * Again, a propagation helper to get information from children to the GUI.
+		 * @param availableGames
+		 */
 		@SuppressWarnings("unchecked")
 		public void publishDelegate(ArrayList<User> availableGames)
 		{
@@ -613,7 +639,9 @@ public class SwingGUI extends JPanel implements ActionListener, ListSelectionLis
 			return userListLocal;
 		}
 
-
+		/**
+		 * Receives lists of lists of available games, gets the first one and adds each user to a list model.
+		 */
 		@Override
 		protected void process(List<ArrayList<User>> listOfAvailableGames) {
 			//System.out.println("Process called");
