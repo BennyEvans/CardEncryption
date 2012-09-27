@@ -18,7 +18,6 @@ import mentalpoker.gameplay.TexasHoldEmGamePlay;
 
 import org.avis.client.InvalidSubscriptionException;
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class Poker.
  */
@@ -33,8 +32,9 @@ public class Poker {
 	/** The com. */
 	ComService comServ;
 
+
 	/**
-	 * Instantiates a new game.
+	 * Instantiates a new game of poker.
 	 *
 	 * @param username the username
 	 * @throws Exception the exception
@@ -48,13 +48,14 @@ public class Poker {
 
 	}
 
+
 	/**
 	 * Start game.
 	 *
-	 * @param isGameHost the is game host
-	 * @param slots the slots
+	 * @param isGameHost the player is the host
+	 * @param slots the number of player slots
 	 * @param hgt the hgt
-	 * @return the array list
+	 * @return the array list of players
 	 * @throws InvalidKeyException the invalid key exception
 	 * @throws BadPaddingException the bad padding exception
 	 * @throws IllegalBlockSizeException the illegal block size exception
@@ -98,7 +99,7 @@ public class Poker {
 		return null;
 	}
 
-	
+
 	/**
 	 * Play game as host.
 	 *
@@ -141,7 +142,7 @@ public class Poker {
 		try {
 			thGamePlay.hostGamePlay(rsaService, comServ, gameUser, gameUsers,
 					sig, encDeck, hgt);
-			
+
 		} catch (Exception e) {
 			System.err.println("Error in host gameplay.");
 			System.exit(0);
@@ -152,6 +153,7 @@ public class Poker {
 
 	}
 
+	
 	/**
 	 * Play game as player.
 	 *
@@ -169,7 +171,7 @@ public class Poker {
 			throws InvalidSubscriptionException, InvalidKeySpecException,
 			NoSuchAlgorithmException, NoSuchPaddingException,
 			NoSuchProviderException, InterruptedException, IOException {
-		
+
 		RSAService rsaService = comServ.waitPQ();
 		gameUser.setDecryptionKey(rsaService.getD());
 
@@ -191,6 +193,7 @@ public class Poker {
 
 	}
 
+	
 	/**
 	 * Creates the deck.
 	 *
@@ -208,8 +211,9 @@ public class Poker {
 		return encDeck;
 	}
 
+	
 	/**
-	 * Sets the username.
+	 * Sets the users username.
 	 *
 	 * @param setUsernameString the new username
 	 * @throws IOException Signals that an I/O exception has occurred.
@@ -218,9 +222,10 @@ public class Poker {
 		gameUser = new User(setUsernameString, sig.getPublicKey());
 	}
 
+	
 	/**
 	 * The main method.
-	 * 
+	 *
 	 * @param args the arguments
 	 */
 	public static void main(String[] args) {
@@ -241,24 +246,27 @@ public class Poker {
 
 	}
 
+	
 	/**
 	 * Gets the game user.
-	 *
+	 * 
 	 * @return the game user
 	 */
 	public User getGameUser() {
 		return gameUser;
 	}
 
+	
 	/**
 	 * Gets the game user username.
-	 *
+	 * 
 	 * @return the game user username
 	 */
 	public String getGameUserUsername() {
 		return gameUser.getUsername();
 	}
 
+	
 	/**
 	 * Sets the game username.
 	 *

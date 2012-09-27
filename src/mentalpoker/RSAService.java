@@ -29,9 +29,16 @@ public class RSAService {
 	private static int MAX_ENC_SIZE = 128;
 
 	/* Standard RSA Variables. */
+	/** The p. */
 	private BigInteger p;
+	
+	/** The q. */
 	private BigInteger q;
+	
+	/** The n. */
 	private BigInteger n;
+	
+	/** The on. */
 	private BigInteger on;
 
 	/** The encryption key. */
@@ -469,6 +476,23 @@ public class RSAService {
 		return encDeck;
 	}
 	
+	
+	/**
+	 * Verifies the winners hand.
+	 *
+	 * @param gameUser the game user
+	 * @param userHands the users hands
+	 * @param winner the winner
+	 * @param rsaServ the rsa service
+	 * @return true, if verified
+	 * @throws InvalidKeySpecException the invalid key spec exception
+	 * @throws NoSuchAlgorithmException the no such algorithm exception
+	 * @throws NoSuchPaddingException the no such padding exception
+	 * @throws NoSuchProviderException the no such provider exception
+	 * @throws InvalidKeyException the invalid key exception
+	 * @throws IllegalBlockSizeException the illegal block size exception
+	 * @throws BadPaddingException the bad padding exception
+	 */
 	public boolean checkWinnersHand(User gameUser, ArrayList<User> userHands, User winner, RSAService rsaServ) throws InvalidKeySpecException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
 		Hand uHand = winner.getUsersHand();
 		Hand dHand;

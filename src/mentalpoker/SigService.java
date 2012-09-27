@@ -64,6 +64,7 @@ public class SigService {
 		System.out.println("Finished generating keys.");
 	}
 
+	
 	/**
 	 * Creates a signature from byte array.
 	 *
@@ -236,6 +237,7 @@ public class SigService {
 		return validateSignatureFromByteArray(sig, data, pKey);
 	}
 
+	
 	/**
 	 * Gets the public key.
 	 * 
