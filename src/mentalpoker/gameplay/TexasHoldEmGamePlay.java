@@ -30,7 +30,7 @@ import mentalpoker.gameplay.handevaluator.Cards;
 import mentalpoker.gameplay.handevaluator.Evaluate;
 import mentalpoker.User;
 
-// TODO: Auto-generated Javadoc
+
 /**
  * The Class TexasHoldEmGamePlay.
  */
