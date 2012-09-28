@@ -15,7 +15,6 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 
-
 import mentalpoker.ComService;
 import mentalpoker.CommunityCards;
 import mentalpoker.Deck;
@@ -31,32 +30,40 @@ import mentalpoker.gameplay.handevaluator.Cards;
 import mentalpoker.gameplay.handevaluator.Evaluate;
 import mentalpoker.User;
 
+// TODO: Auto-generated Javadoc
+/**
+ * The Class TexasHoldEmGamePlay.
+ */
 public class TexasHoldEmGamePlay implements GamePlay {
 
 	/*
 	 * Texas hold em' Gameplay
 	 * 
-	 * Rules:
-	 * 		http://en.wikipedia.org/wiki/Texas_hold_'em
+	 * Rules: http://en.wikipedia.org/wiki/Texas_hold_'em
 	 * 
 	 * 
 	 * Hand Ranks:
 	 * 
-	 * Royal flush (ace-high straight of one suit) 
-	 * Straight flush (straight of entirely one suit)
-	 * Four of a kind (four cards of the same kind)
-	 * Full house (3 of a kind, and a pair)
-	 * Flush (five cards of the same suit)
-	 * Straight (five cards of sequential rank)
-	 * Three-of-a-kind (3 cards of same rank)
-	 * Two pair (2 pairs of 2 cards of the same rank)
-	 * One pair (two cards of the same rank)
-	 * High card (if there are no pairs, the person with the highest card wins)
+	 * Royal flush (ace-high straight of one suit) Straight flush (straight of
+	 * entirely one suit) Four of a kind (four cards of the same kind) Full
+	 * house (3 of a kind, and a pair) Flush (five cards of the same suit)
+	 * Straight (five cards of sequential rank) Three-of-a-kind (3 cards of same
+	 * rank) Two pair (2 pairs of 2 cards of the same rank) One pair (two cards
+	 * of the same rank) High card (if there are no pairs, the person with the
+	 * highest card wins)
 	 */
+	
 
+	/** The Constant SUIT. */
 	private static final int SUIT = 1;
+	
+	/** The Constant CARDTYPE. */
 	private static final int CARDTYPE = 0;
 
+	
+	/* (non-Javadoc)
+	 * @see mentalpoker.gameplay.GamePlay#playerGamePlay(mentalpoker.RSAService, mentalpoker.ComService, mentalpoker.User, java.util.ArrayList, mentalpoker.SigService, mentalpoker.SwingGUI.SearchGamesTask)
+	 */
 	@Override
 	public void playerGamePlay(RSAService rsaService, ComService comServ,
 			User gameUser, ArrayList<User> gameUsers, SigService sig,
@@ -191,6 +198,10 @@ public class TexasHoldEmGamePlay implements GamePlay {
 
 	}
 
+	
+	/* (non-Javadoc)
+	 * @see mentalpoker.gameplay.GamePlay#hostGamePlay(mentalpoker.RSAService, mentalpoker.ComService, mentalpoker.User, java.util.ArrayList, mentalpoker.SigService, mentalpoker.EncryptedDeck, mentalpoker.SwingGUI.HostGameTask)
+	 */
 	@Override
 	public void hostGamePlay(RSAService rsaService, ComService comServ,
 			User gameUser, ArrayList<User> gameUsers, SigService sig,
@@ -424,6 +435,10 @@ public class TexasHoldEmGamePlay implements GamePlay {
 
 	}
 
+	
+	/* (non-Javadoc)
+	 * @see mentalpoker.gameplay.GamePlay#determineWinner(mentalpoker.CommunityCards, java.util.ArrayList)
+	 */
 	@Override
 	public User determineWinner(CommunityCards cc, ArrayList<User> allGameUsers) {
 
@@ -439,8 +454,10 @@ public class TexasHoldEmGamePlay implements GamePlay {
 		Cards board = new Cards(CommunityCards.NUM_CARDS);
 		for (ArrayList<String> ccard : commCardsArray) {
 			board.add(new mentalpoker.gameplay.handevaluator.Card(
-					mentalpoker.gameplay.handevaluator.Card.Rank.parse(ccard.get(CARDTYPE)),
-					mentalpoker.gameplay.handevaluator.Card.Suit.parse(ccard.get(SUIT))));
+					mentalpoker.gameplay.handevaluator.Card.Rank.parse(ccard
+							.get(CARDTYPE)),
+					mentalpoker.gameplay.handevaluator.Card.Suit.parse(ccard
+							.get(SUIT))));
 		}
 
 		Cards[] allUsersCards = new Cards[allGameUsers.size()];
@@ -477,12 +494,16 @@ public class TexasHoldEmGamePlay implements GamePlay {
 			Cards userCards1 = new Cards(2);
 			// Adding the first card
 			userCards1.add(new mentalpoker.gameplay.handevaluator.Card(
-					mentalpoker.gameplay.handevaluator.Card.Rank.parse(card1.get(CARDTYPE)),
-					mentalpoker.gameplay.handevaluator.Card.Suit.parse(card1.get(SUIT))));
+					mentalpoker.gameplay.handevaluator.Card.Rank.parse(card1
+							.get(CARDTYPE)),
+					mentalpoker.gameplay.handevaluator.Card.Suit.parse(card1
+							.get(SUIT))));
 			// Second card
 			userCards1.add(new mentalpoker.gameplay.handevaluator.Card(
-					mentalpoker.gameplay.handevaluator.Card.Rank.parse(card2.get(CARDTYPE)),
-					mentalpoker.gameplay.handevaluator.Card.Suit.parse(card2.get(SUIT))));
+					mentalpoker.gameplay.handevaluator.Card.Rank.parse(card2
+							.get(CARDTYPE)),
+					mentalpoker.gameplay.handevaluator.Card.Suit.parse(card2
+							.get(SUIT))));
 
 			allUsersCards[usersCardsIndex++] = userCards1;
 
@@ -501,6 +522,10 @@ public class TexasHoldEmGamePlay implements GamePlay {
 		return null;
 	}
 
+	
+	/* (non-Javadoc)
+	 * @see mentalpoker.gameplay.GamePlay#init()
+	 */
 	@Override
 	public void init() {
 		Deck.NUM_CARDS = 52;

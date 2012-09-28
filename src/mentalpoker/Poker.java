@@ -26,10 +26,10 @@ public class Poker {
 	/** The game user. */
 	private static User gameUser;
 
-	/** The sig. */
+	/** The signature service. */
 	private static SigService sig;
 
-	/** The com. */
+	/** The communication service. */
 	ComService comServ;
 
 
@@ -55,7 +55,6 @@ public class Poker {
 	 * @param isGameHost the player is the host
 	 * @param slots the number of player slots
 	 * @param hgt the hgt
-	 * @return the array list of players
 	 * @throws InvalidKeyException the invalid key exception
 	 * @throws BadPaddingException the bad padding exception
 	 * @throws IllegalBlockSizeException the illegal block size exception
