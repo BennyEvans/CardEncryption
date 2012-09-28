@@ -67,7 +67,7 @@ public class Poker {
 	 * @throws NoSuchPaddingException the no such padding exception
 	 * @throws NoSuchProviderException the no such provider exception
 	 */
-	public ArrayList<User> StartGame(boolean isGameHost, int slots,
+	public void StartGame(boolean isGameHost, int slots,
 			HostGameTask hgt) throws InvalidKeyException, BadPaddingException,
 			IllegalBlockSizeException, InvalidSubscriptionException,
 			InterruptedException, IOException, InvalidKeySpecException,
@@ -82,7 +82,7 @@ public class Poker {
 		if (gameUsers == null) {
 			comServ.shutdown();
 			System.exit(1);
-			return null;
+			return;
 		}
 
 		System.out.println("\nGame Players:");
@@ -96,7 +96,7 @@ public class Poker {
 			playGameAsHost(gameUsers, hgt);
 		}
 
-		return null;
+		return;
 	}
 
 
