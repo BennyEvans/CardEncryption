@@ -174,13 +174,16 @@ public class TexasHoldEmGamePlay implements GamePlay {
 		// now broadcast you hand and wait for other hands
 		comServ.broadcastMyHand(gameUser);
 		ArrayList<User> userHands = comServ.blockUntilHaveUsersHands();
+		
+		System.out.println("\nUsers Cards:");
+		
 		for (int i = 0; i < userHands.size(); i++) {
 			User tmpUser = userHands.get(i);
 			Hand tmpHand = tmpUser.getUsersHand();
 			if (tmpUser.getID().equals(gameUser.getID())) {
-				System.out.println("ME");
+				System.out.println("Username: Me");
 			} else {
-				System.out.println(tmpUser.getUsername().toString());
+				System.out.println("Username: " + tmpUser.getUsername().toString());
 			}
 			System.out.println("First Card: "
 					+ Character.toString(tmpHand.data.get(0).cardType) + "-"
@@ -410,13 +413,16 @@ public class TexasHoldEmGamePlay implements GamePlay {
 		comServ.broadcastMyHand(gameUser);
 
 		ArrayList<User> userHands = comServ.blockUntilHaveUsersHands();
+		
+		System.out.println("\nUsers Cards:");
+		
 		for (int i = 0; i < userHands.size(); i++) {
 			User tmpUser = userHands.get(i);
 			Hand tmpHand = tmpUser.getUsersHand();
 			if (tmpUser.getID().equals(gameUser.getID())) {
-				System.out.println("ME");
+				System.out.println("Username: Me");
 			} else {
-				System.out.println(tmpUser.getUsername().toString());
+				System.out.println("Username: " + tmpUser.getUsername().toString());
 			}
 			System.out.println("First Card: "
 					+ Character.toString(tmpHand.data.get(0).cardType) + "-"

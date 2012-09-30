@@ -65,7 +65,7 @@ public class Evaluate {
         }
 
 
-        System.out.println(total);
+        //System.out.println(total);
         return odds;
     }
 
