@@ -91,6 +91,10 @@ public class TexasHoldEmGamePlay implements GamePlay {
 		gameUser.setUsersOriginalHand(myHand);
 
 		System.out.println("Got my cards!");
+		
+		//Add additional encryption on top of requests.... used to prevent replay attacks
+		RSAService overEncryption = new RSAService(rsaService.getP(), rsaService.getQ());
+		myHand = overEncryption.encryptEncHand(myHand);
 
 		// copy and randomly shuffle the user list to distribute requests
 		@SuppressWarnings("unchecked")
@@ -105,7 +109,8 @@ public class TexasHoldEmGamePlay implements GamePlay {
 
 		}
 
-		Hand hand = rsaService.decyrptHand(myHand);
+		myHand = rsaService.decyrptEncHand(myHand);
+		Hand hand = overEncryption.decyrptHand(myHand);
 		gameUser.setUsersHand(hand);
 
 		String card1 = Character.toString(hand.data.get(0).cardType) + "-"
@@ -278,6 +283,10 @@ public class TexasHoldEmGamePlay implements GamePlay {
 		}
 
 		System.out.println("Every user has their cards now!");
+		
+		//Add additional encryption on top of requests.... used to prevent replay attacks
+		RSAService overEncryption = new RSAService(rsaService.getP(), rsaService.getQ());
+		myHand = overEncryption.encryptEncHand(myHand);
 
 		// copy and randomly shuffle the user list to distribute requests
 		@SuppressWarnings("unchecked")
@@ -291,8 +300,8 @@ public class TexasHoldEmGamePlay implements GamePlay {
 			}
 
 		}
-
-		Hand hand = rsaService.decyrptHand(myHand);
+		myHand = rsaService.decyrptEncHand(myHand);
+		Hand hand = overEncryption.decyrptHand(myHand);
 		gameUser.setUsersHand(hand);
 
 		String card1 = Character.toString(hand.data.get(0).cardType) + "-"

@@ -17,18 +17,21 @@ import org.bouncycastle.crypto.engines.RSAEngine;
 import org.bouncycastle.crypto.params.RSAKeyParameters;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
+
 /**
  * The Class RSAService.
  */
 public class RSAService {
 
 	/** The key size. */
-	private static int KEY_SIZE = 1024;
+	private static final int KEY_SIZE = 512;
 
 	/** The max encryption size. */
-	private static int MAX_ENC_SIZE = 128;
+	private static final int MAX_ENC_SIZE = 128;
 
+	
 	/* Standard RSA Variables. */
+	
 	/** The p. */
 	private BigInteger p;
 	
@@ -61,8 +64,8 @@ public class RSAService {
 			NoSuchProviderException {
 		
 		Security.addProvider(new BouncyCastleProvider());
-		p = genPrime(KEY_SIZE / 2);
-		q = genPrime(KEY_SIZE / 2);
+		p = genPrime(KEY_SIZE);
+		q = genPrime(KEY_SIZE);
 		n = p.multiply(q);
 		BigInteger qSub = q.subtract(BigInteger.ONE);
 		BigInteger pSub = p.subtract(BigInteger.ONE);
@@ -181,7 +184,7 @@ public class RSAService {
 		BigInteger tmp;
 		BigInteger testRes;
 		while (true) {
-			tmp = genPrime(KEY_SIZE / 2);
+			tmp = genPrime(KEY_SIZE);
 			testRes = on.divideAndRemainder(tmp)[1];
 			if (testRes.compareTo(BigInteger.ZERO) != 0) {
 				e = tmp;
@@ -476,6 +479,29 @@ public class RSAService {
 		return encDeck;
 	}
 	
+	/**
+	 * Encrypt an encrypted hand.
+	 *
+	 * @param encHand the encrypted hand
+	 * @return the encrypted hand
+	 * @throws InvalidKeyException the invalid key exception
+	 * @throws IllegalBlockSizeException the illegal block size exception
+	 * @throws BadPaddingException the bad padding exception
+	 */
+	public EncryptedHand encryptEncHand(EncryptedHand encHand) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+		if (e == null) {
+			System.err
+					.println("Cannot encrypt when using decrypting constructor RSAService(gp, gq, gd)");
+			return null;
+		}
+		EncryptedHand ret = new EncryptedHand();
+		for (int i = 0; i < Hand.NUM_CARDS; i++) {
+			EncryptedCard tmp = encryptEncCard(encHand.data.get(i));
+			ret.data.add(tmp);
+		}
+		return ret;
+	}
+	
 	
 	/**
 	 * Verifies the winners hand.
@@ -527,5 +553,6 @@ public class RSAService {
 		}
 		return true;
 	}
+	
 
 }
