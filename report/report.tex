@@ -188,7 +188,27 @@ We are utilising the poker engine written by Sam Pullara to perform card evaluat
 \section{Remaining security concerns}
 \label{sec:securityConcerns}
 
+Although this section isn't relevant to the implementation as betting is not implemented (winning or losing doesn't really matter), it can be assumed that it will be in the future. The following security concerns relate to the stealing of money by cheating in a game using the current communication and cryptography system implemented. The attacks also depend on how disconnects and cheat messages are treated.\\
+
+\subsection{Man in the middle}
+
+This is one of the obvious attacks although also one of the hardest to accomplish due to the circumstances needed to perform the attack. The goal of this attack would be to intercept communication between a player and the Elvin communication server. If the player was to create a game, the attacker could intercept the “new game” message and change the public key, thereby inserting themselves in between the victim and server.\\
+
+Although the attacker is unable to retrieve a victims cards using a MITM attack, they now have two options; hijack the session and guarantee they win (in a 2 player game) or continue playing and disconnect the victim if the attacker thinks they may lose. In the case of session hijacking, the attacker is guaranteed to win (in a 2 player game) as they can fold the hijacked user at any time. In the other case, an attacker cannot guarantee a win (does not know the users cards) but can improve his chances dramatically by disconnecting the player if the attacker thinks they will lose (depending on how a disconnect is treated). Of both of these methods, the second is more inconspicuous but more unreliable whereas the first (hijacking) is reliable but a lot more obvious to the victim that something is going on.\\
+
+\subsection{Denial of Service}
+
+Denial of service attacks can be used by a player to wreak havoc on innocent players. An attacker can easily deny service by sending non-legitimate cheat messages or by sending messages with faulty signatures or data. All of these scenarios will cause either the attacker themselves or another player to broadcast a cheat message and cause the game to come to an end (the money would be frozen).\\
+
+In addition, the publish/subscribe servers could introduce a policy to deal with cheater notifications by temporarily banning IP’s of players (in the game the cheater notification was sent) for a period of time until the log is checked. This could be used to deny multiple innocent players of service to the server for a period of time.\\
+
 \section{Conclusions}
+
+In conclusion, this implementation of the Mental Poker algorithm has many benefits, though a couple of flaws. While the original algorithm is designed for a purely P2P environment, you could not call this a “perfect” implementation. This is due to the fact that communication is facilitated by a central server running Elvin; it does not allow for players to directly communicate.\\
+
+Further work could be performed to implement double encryption through Elvin’s built-in SSL encryption methods to improve encryption performance, though this was considered unnecessary due to the already implemented RSA encryption.\\
+
+Some improvements could be made, including full playability and the ability for all players to play with a “dealer”, who embargoes community card decryption until all players have finished betting. However, as this was not within the scope of the assignment, it was not included. It is estimated that the SLOC count would at least double with this piece of functionality.\\
 
 
 
