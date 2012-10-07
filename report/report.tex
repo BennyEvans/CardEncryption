@@ -88,7 +88,7 @@ The implementation utilises the UQ Elvin server, and transmits pre-encrypted tex
 \subsection{Encryption}
 \label{sec:encryption}
 
-\begin{figure}[h]
+\begin{figure}[H]
 	\caption{RSA variables used in the generation of the encryption and decryption keys.}
   	\centering
 	$n=pq$\\$\phi=(p-1)(q-1)$
@@ -99,7 +99,7 @@ Encryption is performed using commutative RSA. The aim of commutative RSA is to 
 
 Commutative RSA works by sharing common p and q primes. From this n and $\phi$ can be calculated. The encryption key is randomly generated and needs to be relatively prime to $\phi$ and smaller than $\phi$. In the application implementation, the encryption key e is chosen as a prime number so if $\phi$ mod( e ) is not equal to zero then e is relatively prime to $\phi$.  The decryption key d is then calculated as the modular inverse of e, ie. find d where $ed = 1 mod ( \phi)$. In commutative RSA both e and d are kept private.\\
 
-\begin{figure}[h]
+\begin{figure}[H]
 \caption{Key Generation.}
 \begin{lstlisting}
 private void genKeys() throws NoSuchAlgorithmException,
@@ -148,7 +148,7 @@ The easiest way to explain this is with an example. Figure \ref{fig:com} shows a
 
 After all this, every usersâ€™ decryption request has been compared with another user at least once with the exception of user 4.This means that itâ€™s impossible for users 1, 2 or 3 to replay back a victims original cards (from the dealing of the hands stage) to learn the cards of another user. The only way this could be done is if an attacker were to ask every other user to decrypt the original encrypted hand sent to the victim, which is exactly what this validation step is designed to prevent. Furthermore, an attacker cannot replay back the final stage of decryption from the hand decryption round as the victimsâ€™ hand is doubly encrypted with a purely private key. As for user 4 (the host), naturally they cannot cheat because they are the host and are expected to broadcast the plaintext community cards once everyone has finished decrypting. If they donâ€™t do so, or broadcast the wrong cards, everyone will call cheat and the game will be terminated.
 
-\begin{figure}[h]
+\begin{figure}[H]
 \caption{Community cards decryption check.}
 
 \begin{tabbing}
@@ -188,9 +188,9 @@ The GUI essentially provides an easy to use method of controlling the underlying
 
 \subsection {Inter-thread communication}
 
-The application utilises a communication of string worker, string communication and ArrayBlockingQueues in order to transfer objects of different types to the UI. Places in the original terminal-only program where user input from STDIN would have been required are replaced with ArrayBlockingQueue pushes, which block either the underlying program or the GUIÕs swingworker until information is available. This maintains the flow of information, and ensures that the GUI is in sync with the terminal game.\\
+The application utilises a communication of string worker, string communication and ArrayBlockingQueues in order to transfer objects of different types to the UI. Places in the original terminal-only program where user input from STDIN would have been required are replaced with ArrayBlockingQueue pushes, which block either the underlying program or the GUIï¿½s swingworker until information is available. This maintains the flow of information, and ensures that the GUI is in sync with the terminal game.\\
 
-To communicate back to the GUI, the underlying terminal game can use the SwingWorkersÕ custom publishDelegate(string message) method, which allows strings (with sentinel strings appended) to be sent to the GUI. This is used when community cards are dealt or winners are calculated.
+To communicate back to the GUI, the underlying terminal game can use the SwingWorkersï¿½ custom publishDelegate(string message) method, which allows strings (with sentinel strings appended) to be sent to the GUI. This is used when community cards are dealt or winners are calculated.
 
 \subsection{Card Evaluation}
 
@@ -205,7 +205,7 @@ Although this section isn't relevant to the implementation as betting is not imp
 
 \subsection{Man in the middle}
 
-This is one of the obvious attacks although also one of the hardest to accomplish due to the circumstances needed to perform the attack. The goal of this attack would be to intercept communication between a player and the Elvin communication server. If the player was to create a game, the attacker could intercept the Ònew gameÓ message and change the public key, thereby inserting themselves in between the victim and server.\\
+This is one of the obvious attacks although also one of the hardest to accomplish due to the circumstances needed to perform the attack. The goal of this attack would be to intercept communication between a player and the Elvin communication server. If the player was to create a game, the attacker could intercept the ï¿½new gameï¿½ message and change the public key, thereby inserting themselves in between the victim and server.\\
 
 Although the attacker is unable to retrieve a victims cards using a MITM attack, they now have two options; hijack the session and guarantee they win (in a 2 player game) or continue playing and disconnect the victim if the attacker thinks they may lose. In the case of session hijacking, the attacker is guaranteed to win (in a 2 player game) as they can fold the hijacked user at any time. In the other case, an attacker cannot guarantee a win (does not know the users cards) but can improve his chances dramatically by disconnecting the player if the attacker thinks they will lose (depending on how a disconnect is treated). Of both of these methods, the second is more inconspicuous but more unreliable whereas the first (hijacking) is reliable but a lot more obvious to the victim that something is going on.\\
 
@@ -213,15 +213,15 @@ Although the attacker is unable to retrieve a victims cards using a MITM attack,
 
 Denial of service attacks can be used by a player to wreak havoc on innocent players. An attacker can easily deny service by sending non-legitimate cheat messages or by sending messages with faulty signatures or data. All of these scenarios will cause either the attacker themselves or another player to broadcast a cheat message and cause the game to come to an end (the money would be frozen).\\
 
-In addition, the publish/subscribe servers could introduce a policy to deal with cheater notifications by temporarily banning IPÕs of players (in the game the cheater notification was sent) for a period of time until the log is checked. This could be used to deny multiple innocent players of service to the server for a period of time.\\
+In addition, the publish/subscribe servers could introduce a policy to deal with cheater notifications by temporarily banning IPï¿½s of players (in the game the cheater notification was sent) for a period of time until the log is checked. This could be used to deny multiple innocent players of service to the server for a period of time.\\
 
 \section{Conclusions}
 
-In conclusion, this implementation of the Mental Poker algorithm has many benefits, though a couple of flaws. While the original algorithm is designed for a purely P2P environment, you could not call this a ÒperfectÓ implementation. This is due to the fact that communication is facilitated by a central server running Elvin; it does not allow for players to directly communicate.\\
+In conclusion, this implementation of the Mental Poker algorithm has many benefits, though a couple of flaws. While the original algorithm is designed for a purely P2P environment, you could not call this a ï¿½perfectï¿½ implementation. This is due to the fact that communication is facilitated by a central server running Elvin; it does not allow for players to directly communicate.\\
 
-Further work could be performed to implement double encryption through ElvinÕs built-in SSL encryption methods to improve encryption performance, though this was considered unnecessary due to the already implemented RSA encryption.\\
+Further work could be performed to implement double encryption through Elvinï¿½s built-in SSL encryption methods to improve encryption performance, though this was considered unnecessary due to the already implemented RSA encryption.\\
 
-Some improvements could be made, including full playability and the ability for all players to play with a ÒdealerÓ, who embargoes community card decryption until all players have finished betting. However, as this was not within the scope of the assignment, it was not included. It is estimated that the SLOC count would at least double with this piece of functionality.\\
+Some improvements could be made, including full playability and the ability for all players to play with a ï¿½dealerï¿½, who embargoes community card decryption until all players have finished betting. However, as this was not within the scope of the assignment, it was not included. It is estimated that the SLOC count would at least double with this piece of functionality.\\
 
 
 
