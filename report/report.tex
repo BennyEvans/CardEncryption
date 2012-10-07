@@ -13,7 +13,7 @@
 
 \floatstyle{boxed} 
 \restylefloat{figure}
-\setlength{\intextsep}{1.8ex}
+%\setlength{\intextsep}{1.8ex}
 \setlength{\parindent}{0pt}
 
 \definecolor{dkgreen}{rgb}{0,0.6,0}
@@ -90,14 +90,18 @@ The implementation utilises the UQ Elvin server, and transmits pre-encrypted tex
 
 \begin{figure}[H]
 	\caption{RSA variables used in the generation of the encryption and decryption keys.}
+	\vspace{0.25cm} 
   	\centering
 	$n=pq$\\$\phi=(p-1)(q-1)$
+	\vspace{0.25cm} 
 	\label{fig:rsavars}
 \end{figure}
 
 Encryption is performed using commutative RSA. The aim of commutative RSA is to allow encryption and decryption to happen in an arbitrary order and thus letting users decrypt cards in a different order than they were encrypted. Commutative RSA is the key to Mental Poker. The implementation utilises the BouncyCastle Cryptography library to aid in encryption and decryption.\\
 
-Commutative RSA works by sharing common p and q primes. From this n and $\phi$ can be calculated. The encryption key is randomly generated and needs to be relatively prime to $\phi$ and smaller than $\phi$. In the application implementation, the encryption key e is chosen as a prime number so if $\phi$ mod( e ) is not equal to zero then e is relatively prime to $\phi$.  The decryption key d is then calculated as the modular inverse of e, ie. find d where $ed = 1 mod ( \phi)$. In commutative RSA both e and d are kept private.\\
+Commutative RSA works by sharing common p and q primes. From this n and $\phi$ (see Figure \ref{fig:rsavars}) can be calculated. The encryption key is randomly generated and needs to be relatively prime to $\phi$ and smaller than $\phi$. In the application implementation, the encryption key e is chosen as a prime number so if $\phi$ mod( e ) is not equal to zero then e is relatively prime to $\phi$.  The decryption key d is then calculated as the modular inverse of e, ie. find d where $ed = 1 mod ( \phi)$. In commutative RSA both e and d are kept private.\\
+
+Figure \ref{fig:code} shows the Java code for key generation in the application implementation. The code makes use of the BigInteger library to deal with the massive numbers needed for RSA encryption to be effective. 
 
 \begin{figure}[H]
 \caption{Key Generation.}
@@ -150,6 +154,7 @@ After all this, every users’ decryption request has been compared with another
 
 \begin{figure}[H]
 \caption{Community cards decryption check.}
+\vspace{0.2cm} 
 
 \begin{tabbing}
 First Round:		\hspace{2.5cm} \=  $U_1$ \hspace{1cm}\= $U_2$ \hspace{1cm}\= $U_3$ \hspace{1cm}\= $\underline{{\bf \color{dkgreen}U_4}}$\\
@@ -161,6 +166,7 @@ Fourth Round:		\>$\underline{\bf U_1}$ \>${\bf U_2}$ \>${\bf U_3}$ \>${\bf \colo
 {\bf \color{dkgreen}$U_4$} is the host.\\
 Bold represents that the user has been or is the recipient of a decryption round.\\
 Underlined represents that the user is the recipient of a decryption round.
+\vspace{0.2cm} 
 \label{fig:com}
 \end{figure}
 
