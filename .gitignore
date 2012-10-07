@@ -158,3 +158,11 @@ pip-log.txt
 
 # Mac crap
 .DS_Store
+
+*.aux
+
+report/report.log
+
+report/report.synctex.gz
+
+report/report.pdf
