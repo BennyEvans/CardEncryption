@@ -66,7 +66,9 @@ While the application is quite effective at what it does, there remain a couple 
 
 The Mental Poker algorithm is an algorithm which allows poker cards to be dealt without a centralized third party. It allows each player to ensure that every other player is not cheating, which is incredibly necessary in internet play. \\
 
-The intent of the Mental Poker application was to provide a safe and reliable way of dealing hands over the internet, without having to rely on a central server for any gameplay elements. All elements barring the cryptography and communications subsystems mostly follow the description of the system described in the week 3 lecture notes relating to Mental Poker. However, the communications system utilises a central scalable Elvin server.
+The intent of the Mental Poker application was to provide a safe and reliable way of dealing hands over the internet, without having to rely on a central server for any gameplay elements. All elements barring the cryptography and communications subsystems mostly follow the description of the system described in the week 3 lecture notes relating to Mental Poker. However, the communications system utilises a central scalable Elvin server.\\
+
+This program, once complete is able to be extended to provide truly P2P poker play, without the need for a centralized server. It allows each player in the swarm to trust their money in said game, as they themselves are able to guarantee that every player has not cheated.
 
 \section{Implementation}
 
@@ -148,10 +150,13 @@ After all this, every users‚Äô decryption request has been compared with another
 
 \begin{figure}[h]
 \caption{Community cards decryption check.}
-First Round:		$U_1 U_2 U_3 \underline{{\bf \color{dkgreen}U_4}}$\\
-Second Round: 	$U_1 U_2 \underline{\bf U_3} {\bf \color{dkgreen}U_4}$\\
-Third Round:		$U_1 \underline{\bf U_2} {\bf U_3} {\bf \color{dkgreen}U_4}$\\
-Fourth Round:		$\underline{\bf U_1} {\bf U_2} {\bf U_3} {\bf \color{dkgreen}U_4}$\\
+
+\begin{tabbing}
+First Round:		\hspace{2.5cm} \=  $U_1$ \hspace{1cm}\= $U_2$ \hspace{1cm}\= $U_3$ \hspace{1cm}\= $\underline{{\bf \color{dkgreen}U_4}}$\\
+Second Round: 	\> $U_1$ \> $U_2$ \> $\underline{\bf U_3}$ \> ${\bf \color{dkgreen}U_4}$\\
+Third Round:		\>$U_1$ \> $\underline{\bf U_2}$ \>${\bf U_3}$ \>${\bf \color{dkgreen}U_4}$\\
+Fourth Round:		\>$\underline{\bf U_1}$ \>${\bf U_2}$ \>${\bf U_3}$ \>${\bf \color{dkgreen}U_4}$\\
+\end{tabbing}
 
 {\bf \color{dkgreen}$U_4$} is the host.\\
 Bold represents that the user has been or is the recipient of a decryption round.\\
@@ -177,13 +182,21 @@ Because of this, signatures need to be introduced to stop the spoofing of messag
 
 \subsection{GUI}
 
+The Swing GUI framework is utilised, with a cardlayout used to allow for switching between screens. Communication is implemented using SwingWorkers, which facilitate communication with the underlying game.\\
+
+The GUI essentially provides an easy to use method of controlling the underlying terminal-based game, with hooks built in to allow for communication between these threads. Additionally, the GUI is able to display card images, which make for a much more pleasant game than the terminal version, and a live updating list of available games for users to join. This table is populated by global elvin notifications of pending games.
+
 \subsection {Inter-thread communication}
 
-The application utilises a communication of string worker string communication and ArrayBlockingQueues in order to transfer objects of different types to the UI.
+The application utilises a communication of string worker, string communication and ArrayBlockingQueues in order to transfer objects of different types to the UI. Places in the original terminal-only program where user input from STDIN would have been required are replaced with ArrayBlockingQueue pushes, which block either the underlying program or the GUI’s swingworker until information is available. This maintains the flow of information, and ensures that the GUI is in sync with the terminal game.\\
+
+To communicate back to the GUI, the underlying terminal game can use the SwingWorkers’ custom publishDelegate(string message) method, which allows strings (with sentinel strings appended) to be sent to the GUI. This is used when community cards are dealt or winners are calculated.
 
 \subsection{Card Evaluation}
 
-We are utilising the poker engine written by Sam Pullara to perform card evaluation. While card evaluation is not within the scope of the assessment, we believed that it would be a good feature to include. With this engine, we are able to determine the winner of the game, based on the card hands dealt to each player. This information is then displayed on the GUI.
+The implementation utilises the poker engine written by Sam Pullara to perform card evaluation. While card evaluation is not within the scope of the assessment, it was believed that it would be a good feature to include. With this engine, the winner of the game is easily determined based on the card hands dealt to each player. This information is then displayed on the GUI.\\
+
+While it would be possible to implement card odds for each player during each hand, this would only be simulated, as the outcome of the game is determined at the moment that players join the game and distributes cards.
 
 \section{Remaining security concerns}
 \label{sec:securityConcerns}
