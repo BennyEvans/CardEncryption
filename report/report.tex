@@ -182,9 +182,50 @@ Because of this, signatures need to be introduced to stop the spoofing of messag
 
 \subsection{GUI}
 
+
+
 The Swing GUI framework is utilised, with a cardlayout used to allow for switching between screens. Communication is implemented using SwingWorkers, which facilitate communication with the underlying game.\\
 
 The GUI essentially provides an easy to use method of controlling the underlying terminal-based game, with hooks built in to allow for communication between these threads. Additionally, the GUI is able to display card images, which make for a much more pleasant game than the terminal version, and a live updating list of available games for users to join. This table is populated by global elvin notifications of pending games.
+
+\pagebreak
+\subsubsection{Hosting Games}
+
+\begin{figure}[h!]
+
+\caption{The host game screen with one player already slotted in}
+	\label{hostGame}
+\centering
+\includegraphics[bb=0 0 671 541,scale=0.55]{images/hostgame.png}
+\end{figure}
+
+The GUI allows you to host games and see when players join, in real time. It also allows you to specify the number of slots available for players to join. When these slots are filled, the game commences automatically, signalling to the underlying application to commence encryption of cards.
+
+\pagebreak
+\subsubsection{Joining Games}
+
+\begin{figure}[h!]
+
+\caption{The game search screen showing available games}
+	\label{joinGame}
+\centering
+\includegraphics[bb=0 0 665 539,scale=0.55]{images/joinGame.png}
+\end{figure}
+
+On this screen, players are presented with a list of current games which they can join. Once they select a game and join it, they are placed in a slot and wait until the game commences.
+
+\pagebreak
+\subsubsection{Game Screen}
+
+\begin{figure}[h!]
+
+\caption{Game Screen}
+	\label{commCards}
+\centering
+\includegraphics[bb=0 0 485 348,scale=0.7]{images/commCards.png}
+\end{figure}
+
+On the final screen, the cards in your hand are displayed, along with the "community cards", that is the cards that are dealt by the dealer. Along with this, the results of the card evaluation are displayed, with either a prompt saying that you won, or that you lost, along with the winner's name.
 
 \subsection {Inter-thread communication}
 
