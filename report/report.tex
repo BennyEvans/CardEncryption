@@ -58,7 +58,7 @@
 
 The Mental Poker application created provides a decentralised method of poker hand distribution over the internet for a 7-card Texas Holdem game. The application makes use of RSA encryption and signing of individual cards to prevent cheating, and is able to abort a game if any cheating is detected.\\
 					
-All communication is directed through a scalable publish/subscribe server which acts somewhat like a proxy passing messages from user to user. All of the underlying communication, cryptography and game decision making components are performed in a background thread, and the results are displayed on screen. All functionality relating to game joining and hosting is also visualised on the GUI.\\
+All communication is directed through a scalable publish/subscribe server which acts somewhat like a proxy passing messages from user to user. All of the underlying communication, cryptography and game decision making components are performed in a background thread, and the results are displayed on screen. All functionality relating to game joining and hosting is also visualised on a GUI, which communicates to a back-end application running the business logic.\\
 					
 While the application is quite effective at what it does, there remain a couple of vulnerabilities which are inherent in the design choices made during its construction. They are outlined in Section \ref{sec:securityConcerns} in detail.
 
@@ -72,9 +72,9 @@ This program, once complete is able to be extended to provide truly P2P poker pl
 
 \section{Implementation}
 
-The Mental Poker application consists of X lines of Java code, all of which are available at \url{https://github.com/BennyEvans/CardEncryption}. The application utilises multi-threading through Swingworkers, the Swing GUI framework, the UQ-designed Elvin notification subsystem and a fairly large amount of homespun encryption code.\\
+The Mental Poker application consists of X lines of Java code, all of which are available at \url{https://github.com/BennyEvans/CardEncryption}. The application utilises multi-threading through Swingworkers, the Swing GUI framework, the UQ-designed Elvin notification subsystem and a fairly large amount of homespun encryption code.\\  The application is essentially a terminal application which performs gameplay and game search/joining, which has been modified to allow for GUI hooks. It uses multiple methods to communicate to and from the GUI, and to ensure a responsive and quick GUI at all times.\\
 
-The implementation uses multiple encryption and decryption steps to assure security. As an example, if two players wanted to play a game of Poker they would need some way of securely shuffling the deck. If they don’t wish to rely on a third party then the Mental Poker algorithm could be used. This is how the dealing of cards would be done:\\
+The implementation uses multiple encryption and decryption steps to assure security. As an example, if two players wanted to play a game of Poker they would need some way of securely shuffling the deck. If they don't wish to rely on a third party then the Mental Poker algorithm could be used. This is how the dealing of cards would be done:\\
 
 Player one first encrypts and shuffles the deck. Player one then sends the shuffled and encrypted deck to player two who also encrypts and shuffles the deck. Player two then sends the doubly shuffled and encrypted deck back to player one. At this point everyone has shuffled and encrypted the deck and player one and two have no clue as to which card is which. Player one then chooses two random cards for themselves and two random cards for player two and sends player twos’ cards  to player two. Player one and player two then both encrypt their encrypted hands again with different keys. They then both ask each other to decrypt their doubly encrypted hands. After this, player one and player two are both left with their encrypted hands that are encrypted twice by themselves with different keys (the reason for this is explained in Sections \ref{sec:encryption} and \ref{sec:validation}). After decrypting their own cards, each player has securely received their hand.
 
