@@ -2,6 +2,7 @@
 \usepackage{geometry}                		% See geometry.pdf to learn the layout options. There are lots.
 \usepackage{listings}
 \usepackage{color}
+\usepackage{framed}
 \usepackage{url}
 \geometry{letterpaper}                   		% ... or a4paper or a5paper or ... 
 %\geometry{landscape}                		% Activate for for rotated page geometry
@@ -11,7 +12,8 @@
 \usepackage{amssymb}
 \usepackage{float}
 
-\floatstyle{boxed} 
+%\FrameSep0pt
+
 \restylefloat{figure}
 %\setlength{\intextsep}{1.8ex}
 \setlength{\parindent}{0pt}
@@ -23,9 +25,9 @@
 \lstset{ %
   language=Java,                			% the language of the code
   basicstyle=\footnotesize,           		% the size of the fonts that are used for the code
-  numbers=left,                   			% where to put the line-numbers
-  numberstyle=\tiny\color{gray},  		% the style that is used for the line-numbers
-  stepnumber=1,                   			% the step between two line-numbers. If it's 1, each line 
+  %numbers=,                   			% where to put the line-numbers
+  %numberstyle=\tiny\color{gray},  		% the style that is used for the line-numbers
+  %stepnumber=1,                   			% the step between two line-numbers. If it's 1, each line 
                                   				% will be numbered
   numbersep=5pt,                  			% how far the line-numbers are from the code
   backgroundcolor=\color{white},      	% choose the background color. You must add \usepackage{color}
@@ -90,10 +92,12 @@ The implementation utilises the UQ Elvin server, and transmits pre-encrypted tex
 
 \begin{figure}[H]
 	\caption{RSA variables used in the generation of the encryption and decryption keys.}
-	\vspace{0.25cm} 
+	\vspace{0.2cm} 
   	\centering
-	$n=pq$\\$\phi=(p-1)(q-1)$
-	\vspace{0.25cm} 
+	\begin{framed}
+		$n=pq$\\$\phi=(p-1)(q-1)$
+	\end{framed}
+	\vspace{-0.45cm} 
 	\label{fig:rsavars}
 \end{figure}
 
@@ -105,6 +109,7 @@ Figure \ref{fig:code} shows the Java code for key generation in the application 
 
 \begin{figure}[H]
 \caption{Key Generation.}
+\begin{framed}
 \begin{lstlisting}
 private void genKeys() throws NoSuchAlgorithmException,
 			InvalidKeySpecException {
@@ -123,6 +128,9 @@ private void genKeys() throws NoSuchAlgorithmException,
 		}
 	}
 \end{lstlisting}
+\vspace{-0.45cm} 
+\end{framed}
+\vspace{-0.45cm} 
 \label{fig:code}
 \end{figure}
 
@@ -154,7 +162,8 @@ After all this, every users’ decryption request has been compared with another
 
 \begin{figure}[H]
 \caption{Community cards decryption check.}
-\vspace{0.2cm} 
+\vspace{0.1cm} 
+\begin{framed}
 
 \begin{tabbing}
 First Round:		\hspace{2.5cm} \=  $U_1$ \hspace{1cm}\= $U_2$ \hspace{1cm}\= $U_3$ \hspace{1cm}\= $\underline{{\bf \color{dkgreen}U_4}}$\\
@@ -166,7 +175,9 @@ Fourth Round:		\>$\underline{\bf U_1}$ \>${\bf U_2}$ \>${\bf U_3}$ \>${\bf \colo
 {\bf \color{dkgreen}$U_4$} is the host.\\
 Bold represents that the user has been or is the recipient of a decryption round.\\
 Underlined represents that the user is the recipient of a decryption round.
-\vspace{0.2cm} 
+\vspace{0.1cm} 
+\end{framed}
+\vspace{-0.45cm} 
 \label{fig:com}
 \end{figure}
 
