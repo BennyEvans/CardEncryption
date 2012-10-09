@@ -60,7 +60,7 @@
 
 The Mental Poker application created provides a decentralised method of poker hand distribution over the internet for a 7-card Texas Holdem game. The application makes use of RSA encryption and signing of individual cards to prevent cheating, and is able to abort a game if any cheating is detected.\\
 					
-All communication is directed through a scalable publish/subscribe server which acts somewhat like a proxy passing messages from user to user. All of the underlying communication, cryptography and game decision making components are performed in a background thread, and the results are displayed on screen. All functionality relating to game joining and hosting is also visualised on a GUI, which communicates to a back-end application running the business logic.\\
+All communication is directed through a scalable publish/subscribe server which acts somewhat like a proxy passing messages from user to user. All of the underlying communication, cryptography and game decision making components are performed in a background thread, and the results are displayed on screen. All functionality relating to game joining and hosting is also visualised on a GUI, which communicates to a back-end application running the program logic.\\
 					
 While the application is quite effective at what it does, there remain a couple of vulnerabilities which are inherent in the design choices made during its construction. They are outlined in Section \ref{sec:securityConcerns} in detail.
 
@@ -70,11 +70,13 @@ The Mental Poker algorithm is an algorithm which allows poker cards to be dealt 
 
 The intent of the Mental Poker application was to provide a safe and reliable way of dealing hands over the internet, without having to rely on a central server for any gameplay elements. All elements barring the cryptography and communications subsystems mostly follow the description of the system described in the week 3 lecture notes relating to Mental Poker. However, the communications system utilises a central scalable Elvin server.\\
 
-This program, once complete is able to be extended to provide truly P2P poker play, without the need for a centralized server. It allows each player in the swarm to trust their money in said game, as they themselves are able to guarantee that every player has not cheated.
+This program, once complete could be extended to provide truly P2P poker play, without the need for a centralized message passing server. It was determined however that there is some need for a centralised server when dealing with banning players and other such matters. Both the centralised message passing and P2P approaches allows each player in the swarm to trust their money in said game, as they themselves are able to guarantee that every player has not cheated.
 
 \section{Implementation}
 
-The Mental Poker application consists of X lines of Java code, all of which are available at \url{https://github.com/BennyEvans/CardEncryption}. The application utilises multi-threading through Swingworkers, the Swing GUI framework, the UQ-designed Elvin notification subsystem and a fairly large amount of homespun encryption code.\\  The application is essentially a terminal application which performs gameplay and game search/joining, which has been modified to allow for GUI hooks. It uses multiple methods to communicate to and from the GUI, and to ensure a responsive and quick GUI at all times.\\
+The Mental Poker application consists of 5109 lines of Java code, all of which are available at \url{https://github.com/BennyEvans/CardEncryption}. The application utilises multi-threading through Swingworkers, the Swing GUI framework, the UQ-designed Elvin notification subsystem and a fairly large amount of homespun encryption code.\\ 
+
+The application is essentially a terminal application which performs gameplay and game search/joining, which has been modified to allow for GUI hooks. It uses multiple methods to communicate to and from the GUI, and to ensure a responsive and quick GUI at all times.\\
 
 The implementation uses multiple encryption and decryption steps to assure security. As an example, if two players wanted to play a game of Poker they would need some way of securely shuffling the deck. If they don't wish to rely on a third party then the Mental Poker algorithm could be used. This is how the dealing of cards would be done:\\
 
@@ -199,8 +201,6 @@ Because of this, signatures need to be introduced to stop the spoofing of messag
 
 \subsection{GUI}
 
-
-
 The Swing GUI framework is utilised, with a cardlayout used to allow for switching between screens. Communication is implemented using SwingWorkers, which facilitate communication with the underlying game.\\
 
 The GUI essentially provides an easy to use method of controlling the underlying terminal-based game, with hooks built in to allow for communication between these threads. Additionally, the GUI is able to display card images, which make for a much more pleasant game than the terminal version, and a live updating list of available games for users to join. This table is populated by global elvin notifications of pending games.
@@ -280,8 +280,6 @@ In conclusion, this implementation of the Mental Poker algorithm has many benefi
 Further work could be performed to implement double encryption through Elvin�s built-in SSL encryption methods to improve encryption performance, though this was considered unnecessary due to the already implemented RSA encryption.\\
 
 Some improvements could be made, including full playability and the ability for all players to play with a �dealer�, who embargoes community card decryption until all players have finished betting. However, as this was not within the scope of the assignment, it was not included. It is estimated that the SLOC count would at least double with this piece of functionality.\\
-
-
 
 
 %\section{}
