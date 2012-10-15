@@ -2,6 +2,10 @@ package mentalpoker;
 
 /**
  * The Class CommunityCards.
+ * 
+ * @author Benjamin Evans
+ * @author Emile Victor
+ * @version 1.0
  */
 public class CommunityCards extends Passable<Card> implements
 		java.io.Serializable {

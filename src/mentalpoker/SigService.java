@@ -22,6 +22,10 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 /**
  * The Class SigService.
+ * 
+ * @author Benjamin Evans
+ * @author Emile Victor
+ * @version 1.0
  */
 public class SigService {
 

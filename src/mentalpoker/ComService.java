@@ -32,6 +32,10 @@ import org.avis.common.InvalidURIException;
 
 /**
  * The Class ComService.
+ * 
+ * @author Benjamin Evans
+ * @author Emile Victor
+ * @version 1.0
  */
 public class ComService {
 

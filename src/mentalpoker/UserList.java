@@ -4,6 +4,10 @@ import java.util.ArrayList;
 
 /**
  * The Class UserList.
+ * 
+ * @author Benjamin Evans
+ * @author Emile Victor
+ * @version 1.0
  */
 public class UserList implements java.io.Serializable{
 

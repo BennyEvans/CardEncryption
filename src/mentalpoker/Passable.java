@@ -11,6 +11,10 @@ import java.util.ArrayList;
 
 /**
  * The Class Passable.
+ * 
+ * @author Benjamin Evans
+ * @author Emile Victor
+ * @version 1.0
  *
  * @param <E> the element type
  */

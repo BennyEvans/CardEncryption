@@ -20,6 +20,10 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 /**
  * The Class RSAService.
+ * 
+ * @author Benjamin Evans
+ * @author Emile Victor
+ * @version 1.0
  */
 public class RSAService {
 

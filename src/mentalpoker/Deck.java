@@ -5,6 +5,10 @@ import java.util.Collections;
 
 /**
  * The Class Deck.
+ * 
+ * @author Benjamin Evans
+ * @author Emile Victor
+ * @version 1.0
  */
 public class Deck {
 

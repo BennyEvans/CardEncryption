@@ -6,6 +6,10 @@ import java.util.Arrays;
 
 /**
  * The Class EncryptedCommunityCards.
+ * 
+ * @author Benjamin Evans
+ * @author Emile Victor
+ * @version 1.0
  */
 public class EncryptedCommunityCards extends Passable<EncryptedCard> implements
 		java.io.Serializable {

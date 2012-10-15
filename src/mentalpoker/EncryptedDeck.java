@@ -4,6 +4,10 @@ import java.util.Collections;
 
 /**
  * The Class EncryptedDeck.
+ * 
+ * @author Benjamin Evans
+ * @author Emile Victor
+ * @version 1.0
  */
 public class EncryptedDeck extends Passable<EncryptedCard> implements
 		java.io.Serializable {

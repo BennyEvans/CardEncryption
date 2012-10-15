@@ -21,6 +21,10 @@ import org.avis.client.InvalidSubscriptionException;
 
 /**
  * The Class Poker.
+ * 
+ * @author Benjamin Evans
+ * @author Emile Victor
+ * @version 1.0
  */
 public class Poker {
 

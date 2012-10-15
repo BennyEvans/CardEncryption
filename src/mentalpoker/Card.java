@@ -2,6 +2,10 @@ package mentalpoker;
 
 /**
  * The Class Card.
+ * 
+ * @author Benjamin Evans
+ * @author Emile Victor
+ * @version 1.0
  */
 public class Card implements java.io.Serializable {
 

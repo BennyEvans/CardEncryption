@@ -33,6 +33,10 @@ import mentalpoker.User;
 
 /**
  * The Class TexasHoldEmGamePlay.
+ * 
+ * @author Benjamin Evans
+ * @author Emile Victor
+ * @version 1.0
  */
 public class TexasHoldEmGamePlay implements GamePlay {
 

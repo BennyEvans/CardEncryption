@@ -6,6 +6,10 @@ import java.util.UUID;
 
 /**
  * The Class User.
+ * 
+ * @author Benjamin Evans
+ * @author Emile Victor
+ * @version 1.0
  */
 public class User implements java.io.Serializable{
 	

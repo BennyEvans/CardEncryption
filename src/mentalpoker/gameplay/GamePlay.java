@@ -14,6 +14,10 @@ import mentalpoker.SwingGUI.SearchGamesTask;
 
 /**
  * The Interface GamePlay.
+ * 
+ * @author Benjamin Evans
+ * @author Emile Victor
+ * @version 1.0
  */
 public interface GamePlay {
 

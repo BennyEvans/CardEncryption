@@ -2,6 +2,10 @@ package mentalpoker;
 
 /**
  * The Class Hand.
+ * 
+ * @author Benjamin Evans
+ * @author Emile Victor
+ * @version 1.0
  */
 public class Hand extends Passable<Card> implements java.io.Serializable {
 

@@ -2,6 +2,10 @@ package mentalpoker;
 
 /**
  * The Class EncryptedCard.
+ * 
+ * @author Benjamin Evans
+ * @author Emile Victor
+ * @version 1.0
  */
 public class EncryptedCard implements java.io.Serializable {
 
