@@ -70,7 +70,7 @@ The Mental Poker algorithm is an algorithm which allows poker cards to be dealt 
 
 The intent of the Mental Poker application was to provide a safe and reliable way of dealing hands over the internet, without having to rely on a central server for any gameplay elements. All elements barring the cryptography and communications subsystems mostly follow the description of the system described in the week 3 lecture notes relating to Mental Poker. However, the communications system utilises a central scalable Elvin server.\\
 
-This program, once complete could be extended to provide truly P2P poker play, without the need for a centralized message passing server. It was determined however that there is some need for a centralised server when dealing with banning players and other such matters. Both the centralised message passing and P2P approaches allows each player in the swarm to trust their money in said game, as they themselves are able to guarantee that every player has not cheated.
+This program, once complete could be extended to provide truly P2P poker play, without the need for a centralized message passing server. It was determined however that there is some need for a centralised server when dealing with the banning of players. Both the centralised message passing and P2P approaches allows each player in the swarm to trust their money in said game, as they themselves are able to guarantee that every player has not cheated.
 
 \section{Implementation}
 
@@ -80,7 +80,7 @@ The application is essentially a terminal application which performs gameplay an
 
 The implementation uses multiple encryption and decryption steps to assure security. As an example, if two players wanted to play a game of Poker they would need some way of securely shuffling the deck. If they don't wish to rely on a third party then the Mental Poker algorithm could be used. This is how the dealing of cards would be done:\\
 
-Player one first encrypts and shuffles the deck. Player one then sends the shuffled and encrypted deck to player two who also encrypts and shuffles the deck. Player two then sends the doubly shuffled and encrypted deck back to player one. At this point everyone has shuffled and encrypted the deck and player one and two have no clue as to which card is which. Player one then chooses two random cards for themselves and two random cards for player two and sends player twos’ cards  to player two. Player one and player two then both encrypt their encrypted hands again with different keys. They then both ask each other to decrypt their doubly encrypted hands. After this, player one and player two are both left with their encrypted hands that are encrypted twice by themselves with different keys (the reason for this is explained in Sections \ref{sec:encryption} and \ref{sec:validation}). After decrypting their own cards, each player has securely received their hand.
+Player one first encrypts and shuffles the deck. Player one then sends the shuffled and encrypted deck to player two who also encrypts and shuffles the deck. Player two then sends the doubly shuffled and encrypted deck back to player one. At this point everyone has shuffled and encrypted the deck and player one and two have no clue as to which card is which. Player one then chooses two random cards for themselves and two random cards for player two and sends player two's cards to player two. Player one and player two then both encrypt their encrypted hands again with different keys. They then both ask each other to decrypt their doubly encrypted hands. After this, player one and player two are both left with their encrypted hands that are encrypted twice by themselves with different keys (the reason for this is explained in Sections \ref{sec:encryption} and \ref{sec:validation}). After decrypting their own cards, each player has securely received their hand.
 
 \subsection{Communications Subsystem}
 \label{sec:comsubsys}				
@@ -103,7 +103,7 @@ The implementation utilises the UQ Elvin server, and transmits pre-encrypted tex
 	\label{fig:rsavars}
 \end{figure}
 
-Encryption is performed using commutative RSA. The aim of commutative RSA is to allow encryption and decryption to happen in an arbitrary order and thus letting users decrypt cards in a different order than they were encrypted. Commutative RSA is the key to Mental Poker. The implementation utilises the BouncyCastle Cryptography library to aid in encryption and decryption.\\
+Encryption is performed using commutative RSA. The aim of commutative RSA is to allow encryption and decryption to happen in an arbitrary order and thus allow users to decrypt cards in a different order than that in which they were encrypted. Commutative RSA is the key to Mental Poker. The implementation utilises the BouncyCastle Cryptography library to aid in encryption and decryption.\\
 
 Commutative RSA works by sharing common p and q primes. From this n and $\phi$ (see Figure \ref{fig:rsavars}) can be calculated. The encryption key is randomly generated and needs to be relatively prime to $\phi$ and smaller than $\phi$. In the application implementation, the encryption key e is chosen as a prime number so if $\phi$ mod( e ) is not equal to zero then e is relatively prime to $\phi$.  The decryption key d is then calculated as the modular inverse of e, ie. find d where $ed = 1 mod ( \phi)$. In commutative RSA both e and d are kept private.\\
 
@@ -227,7 +227,7 @@ To communicate back to the GUI, the underlying terminal game can use the SwingWo
 
 The implementation utilises the poker engine written by Sam Pullara to perform card evaluation. While card evaluation is not within the scope of the assessment, it was believed that it would be a good feature to include. With this engine, the winner of the game is easily determined based on the card hands dealt to each player. This information is then displayed on the GUI.\\
 
-While it would be possible to implement card odds for each player during each hand, this would only be simulated, as the outcome of the game is determined at the moment that players join the game and distributes cards.
+While it would be possible to implement card odds for each player during each hand, this would only be simulated, as the outcome of the game is determined at the moment that players join the game and distributes cards. By implementing incremental odds and card play, we would see a fundamental change in the structure of the codebase.
 
 \section{Remaining security concerns}
 \label{sec:securityConcerns}
@@ -244,13 +244,15 @@ Although the attacker is unable to retrieve a victims cards using a MITM attack,
 
 Denial of service attacks can be used by a player to wreak havoc on innocent players. An attacker can easily deny service by sending non-legitimate cheat messages or by sending messages with faulty signatures or data. All of these scenarios will cause either the attacker themselves or another player to broadcast a cheat message and cause the game to come to an end (the money would be frozen).\\
 
-In addition, the publish/subscribe servers could introduce a policy to deal with cheater notifications by temporarily banning IP�s of players (in the game the cheater notification was sent) for a period of time until the log is checked. This could be used to deny multiple innocent players of service to the server for a period of time.\\
+In addition, the publish/subscribe servers could introduce a policy to deal with cheater notifications by temporarily banning IPs of players (in the game the cheater notification was sent) for a period of time until the log is checked. This could be used to deny multiple innocent players of service to the server for a period of time.\\
+
+It is suggested that future work could include modification of the Elvin server in order to allow for the banning of individual IPs at request of individual Mental Poker games.
 
 \section{Conclusions}
 
 In conclusion, this implementation of the Mental Poker algorithm has many benefits, though a couple of flaws. While the original algorithm is designed for a purely P2P environment, you could not call this a �perfect� implementation. This is due to the fact that communication is facilitated by a central server running Elvin; it does not allow for players to directly communicate.\\
 
-Further work could be performed to implement double encryption through Elvin�s built-in SSL encryption methods to improve encryption performance, though this was considered unnecessary due to the already implemented RSA encryption.\\
+Further work could be performed to implement double encryption through Elvin's built-in SSL encryption methods to improve encryption performance, though this was considered unnecessary due to the already implemented RSA encryption.\\
 
 Some improvements could be made, including full playability and the ability for all players to play with a �dealer�, who embargoes community card decryption until all players have finished betting. However, as this was not within the scope of the assignment, it was not included. It is estimated that the SLOC count would at least double with this piece of functionality.\\
 
